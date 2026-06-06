@@ -1,0 +1,453 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── IDENTITY ────────────────────────────────────────────────────
+
+model Tenant {
+  id        String       @id @default(uuid())
+  name      String
+  slug      String       @unique
+  plan      TenantPlan   @default(FREE)
+  status    TenantStatus @default(ACTIVE)
+  timezone  String       @default("America/Sao_Paulo")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  evolutionApiUrl       String?
+  evolutionApiKey       String?
+  evolutionInstanceName String?
+  resendApiKey          String?
+  resendFromEmail       String?
+
+  users         User[]
+  tutors        Tutor[]
+  animals       Animal[]
+  consultations Consultation[]
+
+  @@map("tenants")
+}
+
+model User {
+  id                    String     @id @default(uuid())
+  tenantId              String?    // nullable: preenchido pelo evento createUser após OAuth
+  name                  String?    // nullable: adapter pode receber null do OAuth
+  email                 String     @unique
+  emailVerified         DateTime?  // obrigatório pelo @auth/prisma-adapter
+  role                  UserRole   @default(VETERINARIAN)
+  status                UserStatus @default(ACTIVE)
+  crmv                  String?
+  specialty             String?
+  signatureUrl          String?
+  googleId              String?
+  googleCalendarToken   String?
+  googleCalendarRefresh String?
+  image                 String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id])
+  consultations Consultation[]
+  prescriptions Prescription[]
+  attachments   Attachment[]
+  accounts      Account[]
+  sessions      Session[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── PATIENTS ────────────────────────────────────────────────────
+
+model Tutor {
+  id           String      @id @default(uuid())
+  tenantId     String
+  name         String
+  cpf          String?
+  phone        String
+  whatsapp     String?
+  email        String?
+  street       String?
+  number       String?
+  complement   String?
+  neighborhood String?
+  city         String?
+  state        String?
+  zipCode      String?
+  notes              String?     @db.Text
+  notifyWhatsApp     Boolean     @default(true)
+  notifyEmail        Boolean     @default(false)
+  notifyConsultation Boolean     @default(true)
+  notifyVaccination  Boolean     @default(true)
+  notifyReturn       Boolean     @default(true)
+  status             TutorStatus @default(ACTIVE)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  animals          Animal[]
+  notificationLogs NotificationLog[]
+
+  @@unique([tenantId, cpf])
+  @@index([tenantId])
+  @@index([tenantId, name])
+  @@index([tenantId, phone])
+  @@map("tutors")
+}
+
+model Animal {
+  id        String       @id @default(uuid())
+  tenantId  String
+  tutorId   String
+  name      String
+  species   Species
+  breed     String?
+  sex       Sex          @default(UNKNOWN)
+  birthDate DateTime?
+  weightKg  Decimal?     @db.Decimal(5, 2)
+  color     String?
+  castrated Boolean      @default(false)
+  microchip String?
+  photoUrl  String?
+  notes     String?      @db.Text
+  status    AnimalStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  tutor              Tutor               @relation(fields: [tutorId], references: [id])
+  consultations      Consultation[]
+  vaccinationRecords VaccinationRecord[]
+  dewormingRecords   DewormingRecord[]
+  antiFleasRecords   AntiFleasRecord[]
+  attachments        Attachment[]
+  prescriptions      Prescription[]
+  notificationLogs   NotificationLog[]
+
+  @@index([tenantId])
+  @@index([tenantId, tutorId])
+  @@index([tenantId, species])
+  @@map("animals")
+}
+
+// ─── CLINICAL ────────────────────────────────────────────────────
+
+model Consultation {
+  id                    String             @id @default(uuid())
+  tenantId              String
+  animalId              String
+  veterinarianId        String
+  scheduledAt           DateTime
+  street                String?
+  number                String?
+  complement            String?
+  neighborhood          String?
+  city                  String?
+  state                 String?
+  zipCode               String?
+  status                ConsultationStatus @default(SCHEDULED)
+  googleCalendarEventId String?
+  anamnesis             String?            @db.Text
+  diagnosis             String?            @db.Text
+  observations          String?            @db.Text
+  returnDate            DateTime?
+  returnEventId         String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  animal        Animal         @relation(fields: [animalId], references: [id])
+  veterinarian  User           @relation(fields: [veterinarianId], references: [id])
+  prescriptions Prescription[]
+  attachments   Attachment[]
+
+  @@index([tenantId])
+  @@index([tenantId, animalId])
+  @@index([tenantId, scheduledAt])
+  @@index([tenantId, status])
+  @@index([tenantId, veterinarianId, scheduledAt])
+  @@map("consultations")
+}
+
+// ─── PREVENTIVE ───────────────────────────────────────────────────
+
+model VaccinationRecord {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  animalId              String
+  vaccine               String
+  appliedAt             DateTime
+  nextDoseAt            DateTime?
+  batchNumber           String?
+  manufacturer          String?
+  observations          String?
+  googleCalendarEventId String?
+  createdAt             DateTime  @default(now())
+
+  animal Animal @relation(fields: [animalId], references: [id])
+
+  @@index([tenantId])
+  @@index([animalId])
+  @@index([tenantId, nextDoseAt])
+  @@map("vaccination_records")
+}
+
+model DewormingRecord {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  animalId              String
+  medication            String
+  appliedAt             DateTime
+  nextApplicationAt     DateTime?
+  observations          String?
+  googleCalendarEventId String?
+  createdAt             DateTime  @default(now())
+
+  animal Animal @relation(fields: [animalId], references: [id])
+
+  @@index([tenantId])
+  @@index([animalId])
+  @@map("deworming_records")
+}
+
+model AntiFleasRecord {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  animalId              String
+  medication            String
+  appliedAt             DateTime
+  nextApplicationAt     DateTime?
+  observations          String?
+  googleCalendarEventId String?
+  createdAt             DateTime  @default(now())
+
+  animal Animal @relation(fields: [animalId], references: [id])
+
+  @@index([tenantId])
+  @@index([animalId])
+  @@map("anti_fleas_records")
+}
+
+// ─── PRESCRIPTIONS ────────────────────────────────────────────────
+
+model Prescription {
+  id             String    @id @default(uuid())
+  tenantId       String
+  consultationId String
+  animalId       String
+  veterinarianId String
+  diagnosis      String    @db.Text
+  observations   String?   @db.Text
+  pdfUrl         String?
+  pdfGeneratedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  consultation Consultation       @relation(fields: [consultationId], references: [id])
+  animal       Animal             @relation(fields: [animalId], references: [id])
+  veterinarian User               @relation(fields: [veterinarianId], references: [id])
+  items        PrescriptionItem[]
+
+  @@index([tenantId])
+  @@index([animalId])
+  @@index([consultationId])
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  id             String  @id @default(uuid())
+  prescriptionId String
+  medication     String
+  dosage         String
+  frequency      String
+  duration       String
+  instructions   String?
+  sortOrder      Int     @default(0)
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+  @@map("prescription_items")
+}
+
+// ─── DOCUMENTS ───────────────────────────────────────────────────
+
+model Attachment {
+  id             String         @id @default(uuid())
+  tenantId       String
+  animalId       String
+  consultationId String?
+  type           AttachmentType @default(OTHER)
+  name           String
+  storageKey     String
+  mimeType       String
+  sizeBytes      Int
+  uploadedById   String
+  createdAt      DateTime       @default(now())
+
+  animal       Animal        @relation(fields: [animalId], references: [id])
+  consultation Consultation? @relation(fields: [consultationId], references: [id])
+  uploadedBy   User          @relation(fields: [uploadedById], references: [id])
+
+  @@index([tenantId])
+  @@index([animalId])
+  @@index([consultationId])
+  @@map("attachments")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────
+
+enum TenantPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum UserRole {
+  OWNER
+  VETERINARIAN
+  ASSISTANT
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TutorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AnimalStatus {
+  ACTIVE
+  DECEASED
+  INACTIVE
+}
+
+enum Species {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  REPTILE
+  OTHER
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum ConsultationStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum AttachmentType {
+  EXAM
+  PHOTO
+  REPORT
+  EXTERNAL_PRESCRIPTION
+  OTHER
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────
+
+enum NotificationType {
+  CONSULTATION_REMINDER
+  VACCINATION_REMINDER
+  RETURN_REMINDER
+  CUSTOM
+}
+
+enum NotificationChannel {
+  WHATSAPP
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+}
+
+model NotificationLog {
+  id             String             @id @default(uuid())
+  tenantId       String
+  tutorId        String
+  animalId       String
+  type           NotificationType
+  channel        NotificationChannel
+  recipientPhone String?
+  recipientEmail String?
+  message        String             @db.Text
+  status         NotificationStatus @default(PENDING)
+  errorMessage   String?
+  sentAt         DateTime?
+  createdAt      DateTime           @default(now())
+
+  tutor  Tutor  @relation(fields: [tutorId], references: [id])
+  animal Animal @relation(fields: [animalId], references: [id])
+
+  @@index([tenantId])
+  @@index([tutorId])
+  @@index([animalId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("notification_logs")
+}
