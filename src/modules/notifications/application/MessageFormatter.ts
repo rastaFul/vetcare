@@ -8,9 +8,20 @@ export interface MessageVars {
   vetName: string
 }
 
-function fmt(template: string, vars: MessageVars): string {
+export interface SessionMessageVars {
+  clientName: string
+  serviceName: string
+  date: string
+  time?: string
+  address?: string
+  therapistName: string
+  tenantName: string
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fmt(template: string, vars: Record<string, any>): string {
   return Object.entries(vars).reduce(
-    (msg, [key, val]) => msg.replaceAll(`{{${key}}}`, val ?? ''),
+    (msg: string, [key, val]) => msg.replaceAll(`{{${key}}}`, val ?? ''),
     template
   )
 }
@@ -47,6 +58,48 @@ export const MessageFormatter = {
 
   returnEmailSubject(animalName: string): string {
     return `🐾 Lembrete de Retorno — ${animalName}`
+  },
+
+  sessionWhatsApp(vars: SessionMessageVars): string {
+    return fmt(
+      `🌿 *{{tenantName}}* — Lembrete de Sessão\n\nOlá *{{clientName}}*!\n\nSua {{serviceName}} está agendada para:\n📅 *{{date}}* às *{{time}}*\n{{address}}\n\nEm caso de dúvidas, entre em contato.\n\n_{{therapistName}}_`,
+      vars as unknown as Record<string, string | undefined>
+    )
+  },
+
+  sessionReturnWhatsApp(vars: SessionMessageVars): string {
+    return fmt(
+      `🌿 *{{tenantName}}* — Lembrete de Retorno\n\nOlá *{{clientName}}*!\n\nSeu retorno de {{serviceName}} está previsto para:\n📅 *{{date}}*\n\nEntre em contato para confirmar o agendamento.\n\n_{{therapistName}}_`,
+      vars as unknown as Record<string, string | undefined>
+    )
+  },
+
+  sessionEmailSubject(clientName: string, serviceName: string): string {
+    return `🌿 Lembrete de Sessão — ${clientName} (${serviceName})`
+  },
+
+  sessionEmailHtml(vars: SessionMessageVars & { type: 'session' | 'session_return' }): string {
+    const body = vars.type === 'session'
+      ? `<p>Sua <strong>${vars.serviceName}</strong> está agendada para:</p>
+         <div style="background:#f0fdf4;border-radius:8px;padding:16px;margin:16px 0">
+           <p style="margin:4px 0">📅 <strong>${vars.date}</strong>${vars.time ? ` às ${vars.time}` : ''}</p>
+           ${vars.address ? `<p style="margin:4px 0">📍 ${vars.address}</p>` : ''}
+         </div>`
+      : `<p>Seu retorno de <strong>${vars.serviceName}</strong> está previsto para:</p>
+         <div style="background:#fefce8;border-radius:8px;padding:16px;margin:16px 0">
+           <p style="margin:4px 0">📅 <strong>${vars.date}</strong></p>
+         </div>
+         <p>Entre em contato para confirmar o agendamento.</p>`
+
+    return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+      <div style="border-bottom:3px solid #16a34a;padding-bottom:16px;margin-bottom:24px">
+        <h1 style="color:#16a34a;margin:0;font-size:20px">🌿 ${vars.tenantName}</h1>
+      </div>
+      <p>Olá <strong>${vars.clientName}</strong>,</p>
+      ${body}
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+      <p style="font-size:12px;color:#64748b">${vars.therapistName}</p>
+    </body></html>`
   },
 
   emailHtml(vars: MessageVars & { type: 'consultation' | 'vaccination' | 'return' }): string {

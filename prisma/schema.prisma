@@ -24,10 +24,16 @@ model Tenant {
   resendApiKey          String?
   resendFromEmail       String?
 
+  professionType        ProfessionType @default(VETERINARIAN)
+  professionalRegLabel  String?        // "CRMV", "CRP", "CMT" etc
+
   users         User[]
   tutors        Tutor[]
   animals       Animal[]
   consultations Consultation[]
+  clients       Client[]
+  services      Service[]
+  sessions      AppSession[]
 
   @@map("tenants")
 }
@@ -56,6 +62,7 @@ model User {
   attachments   Attachment[]
   accounts      Account[]
   sessions      Session[]
+  appSessions   AppSession[]   @relation("SessionTherapist")
 
   @@index([tenantId])
   @@map("users")
@@ -412,6 +419,25 @@ enum NotificationType {
   VACCINATION_REMINDER
   RETURN_REMINDER
   CUSTOM
+  SESSION_REMINDER
+  SESSION_RETURN_REMINDER
+}
+
+enum ProfessionType {
+  VETERINARIAN
+  MASSAGE_THERAPIST
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SessionStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
 }
 
 enum NotificationChannel {
@@ -429,8 +455,9 @@ enum NotificationStatus {
 model NotificationLog {
   id             String             @id @default(uuid())
   tenantId       String
-  tutorId        String
-  animalId       String
+  tutorId        String?
+  clientId       String?
+  animalId       String?
   type           NotificationType
   channel        NotificationChannel
   recipientPhone String?
@@ -441,8 +468,9 @@ model NotificationLog {
   sentAt         DateTime?
   createdAt      DateTime           @default(now())
 
-  tutor  Tutor  @relation(fields: [tutorId], references: [id])
-  animal Animal @relation(fields: [animalId], references: [id])
+  tutor  Tutor?  @relation(fields: [tutorId], references: [id])
+  animal Animal? @relation(fields: [animalId], references: [id])
+  client Client? @relation(fields: [clientId], references: [id])
 
   @@index([tenantId])
   @@index([tutorId])
@@ -450,4 +478,115 @@ model NotificationLog {
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
   @@map("notification_logs")
+}
+
+// ─── CLIENTS (generic human client — for non-vet professions) ────────────────
+
+model Client {
+  id           String       @id @default(uuid())
+  tenantId     String
+  name         String
+  phone        String
+  whatsapp     String?
+  email        String?
+  birthDate    DateTime?
+  street       String?
+  number       String?
+  complement   String?
+  neighborhood String?
+  city         String?
+  state        String?
+  zipCode      String?
+  notes        String?      @db.Text
+  status       ClientStatus @default(ACTIVE)
+  notifyWhatsApp     Boolean @default(true)
+  notifyEmail        Boolean @default(false)
+  notifySession      Boolean @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  tenant           Tenant              @relation(fields: [tenantId], references: [id])
+  healthRecord     ClientHealthRecord?
+  sessions         AppSession[]
+  notificationLogs NotificationLog[]
+
+  @@index([tenantId])
+  @@index([tenantId, name])
+  @@index([tenantId, phone])
+  @@map("clients")
+}
+
+model ClientHealthRecord {
+  id                String   @id @default(uuid())
+  tenantId          String
+  clientId          String   @unique
+  pathologies       String?  @db.Text
+  contraindications String?  @db.Text
+  medications       String?  @db.Text
+  allergies         String?  @db.Text
+  objectives        String?  @db.Text
+  observations      String?  @db.Text
+  updatedAt         DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@index([tenantId])
+  @@map("client_health_records")
+}
+
+// ─── SERVICES (service catalog — massage types, etc.) ────────────────────────
+
+model Service {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  durationMin Int
+  price       Decimal  @db.Decimal(10, 2)
+  description String?
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  appSessions AppSession[]
+
+  @@index([tenantId])
+  @@index([tenantId, active])
+  @@map("services")
+}
+
+// ─── SESSIONS (generic appointments — for non-vet professions) ───────────────
+
+model AppSession {
+  id                    String        @id @default(uuid())
+  tenantId              String
+  clientId              String
+  serviceId             String?
+  therapistId           String
+  scheduledAt           DateTime
+  status                SessionStatus @default(SCHEDULED)
+  street                String?
+  number                String?
+  complement            String?
+  neighborhood          String?
+  city                  String?
+  state                 String?
+  zipCode               String?
+  notes                 String?       @db.Text
+  priceCharged          Decimal?      @db.Decimal(10, 2)
+  googleCalendarEventId String?
+  returnDate            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  client    Client   @relation(fields: [clientId], references: [id])
+  service   Service? @relation(fields: [serviceId], references: [id])
+  therapist User     @relation("SessionTherapist", fields: [therapistId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, clientId])
+  @@index([tenantId, scheduledAt])
+  @@index([tenantId, status])
+  @@map("app_sessions")
 }

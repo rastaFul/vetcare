@@ -5,11 +5,11 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, Upload, Settings, User, Calendar, Bell } from 'lucide-react'
+import { CheckCircle, XCircle, Upload, Settings, User, Calendar, Bell, Briefcase } from 'lucide-react'
 import Image from 'next/image'
 import { NotificationSettingsTab } from '@/components/features/notifications/NotificationSettingsTab'
 
-type TabId = 'perfil' | 'calendario' | 'assinatura' | 'notificacoes'
+type TabId = 'perfil' | 'calendario' | 'assinatura' | 'notificacoes' | 'profissao'
 
 interface ProfileData {
   id: string
@@ -27,6 +27,7 @@ interface CalendarStatus {
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'perfil', label: 'Meu Perfil', icon: User },
+  { id: 'profissao', label: 'Profissão', icon: Briefcase },
   { id: 'calendario', label: 'Google Calendar', icon: Calendar },
   { id: 'assinatura', label: 'Assinatura', icon: Settings },
   { id: 'notificacoes', label: 'Notificações', icon: Bell },
@@ -44,6 +45,8 @@ export default function ConfiguracoesPage() {
   const [form, setForm] = useState({ name: '', crmv: '', specialty: '' })
   const fileRef = useRef<HTMLInputElement>(null)
   const [signatureUrl, setSignatureUrl] = useState<string | undefined>()
+  const [professionForm, setProfessionForm] = useState({ professionType: 'VETERINARIAN', professionalRegLabel: '' })
+  const [loadingProfession, setLoadingProfession] = useState(true)
 
   useEffect(() => {
     fetch('/api/v1/settings/profile')
@@ -63,6 +66,13 @@ export default function ConfiguracoesPage() {
       .then((r) => r.json())
       .then((b) => setCalendarStatus(b.data))
       .finally(() => setLoadingCalendar(false))
+
+    fetch('/api/v1/settings/profession')
+      .then((r) => r.json())
+      .then((b) => {
+        if (b.data) setProfessionForm({ professionType: b.data.professionType, professionalRegLabel: b.data.professionalRegLabel ?? '' })
+      })
+      .finally(() => setLoadingProfession(false))
   }, [])
 
   async function handleSaveProfile(e: React.FormEvent) {
@@ -270,6 +280,58 @@ export default function ConfiguracoesPage() {
                       </button>
                     </div>
                   )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Profissão Tab */}
+          {activeTab === 'profissao' && (
+            <>
+              {loadingProfession ? (
+                <div className="space-y-4">{[1,2].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Profissão</label>
+                    <select
+                      value={professionForm.professionType}
+                      onChange={(e) => setProfessionForm((f) => ({ ...f, professionType: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="VETERINARIAN">🐾 Veterinário(a)</option>
+                      <option value="MASSAGE_THERAPIST">💆 Massoterapeuta</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Registro Profissional</label>
+                    <input
+                      type="text"
+                      value={professionForm.professionalRegLabel}
+                      onChange={(e) => setProfessionForm((f) => ({ ...f, professionalRegLabel: e.target.value }))}
+                      placeholder="Ex: CRMV-SP 12345, CMT 678..."
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      setSaving(true); setError(''); setSuccess('')
+                      try {
+                        const res = await fetch('/api/v1/settings/profession', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(professionForm),
+                        })
+                        if (!res.ok) { const b = await res.json(); setError(b.error?.message ?? 'Erro'); return }
+                        setSuccess('Configuração de profissão salva!')
+                      } finally { setSaving(false) }
+                    }}
+                    disabled={saving}
+                    className="w-full"
+                  >
+                    {saving ? 'Salvando...' : 'Salvar'}
+                  </Button>
+                  <p className="text-xs text-gray-400">Ao alterar o tipo de profissão, faça logout e login novamente para atualizar o menu.</p>
                 </div>
               )}
             </>

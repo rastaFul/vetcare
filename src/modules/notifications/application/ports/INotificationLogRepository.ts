@@ -5,5 +5,7 @@ export interface INotificationLogRepository {
   update(log: NotificationLog): Promise<void>
   findByTutor(tutorId: string, tenantId: string, limit?: number): Promise<NotificationLog[]>
   findByAnimal(animalId: string, tenantId: string, limit?: number): Promise<NotificationLog[]>
+  findByClient(clientId: string, tenantId: string, limit?: number): Promise<NotificationLog[]>
   existsSentToday(tutorId: string, type: string, referenceId?: string): Promise<boolean>
+  existsSentTodayForClient(clientId: string, type: string): Promise<boolean>
 }

@@ -201,3 +201,62 @@ Iniciado: 2026-06-04T14:32:18-03:00
 - next build: PASS (0 errors, all pages compiled)
 - Screenshots: login page ✅ (paw icon, compact card, vertically centered)
 - Status: COMPLETE
+
+## Task: Sprint 1 Platform — Schema + Domain + Tests — 2026-06-06T03:40:00-03:00
+- tsc --noEmit: PASS (0 errors)
+- eslint: PASS (0 errors, 0 warnings)
+- jest: PASS (221/221 tests, 46 suites)
+- TDD: RED (14 suites failing — no implementations) → GREEN (43 new tests passing)
+- Prisma migration: PASS (add_platform_massagista applied, prisma generate OK)
+- Schema changes:
+  - New enums: ProfessionType, ClientStatus, SessionStatus, SESSION_REMINDER, SESSION_RETURN_REMINDER
+  - Tenant: +professionType, +professionalRegLabel, +clients, +services, +sessions relations
+  - User: +appSessions relation
+  - NotificationLog: tutorId optional, +clientId, +client relation
+  - New models: Client, ClientHealthRecord, Service, AppSession (renamed from Session to avoid NextAuth conflict)
+- Files created (37):
+  - src/modules/clients/domain/entities/Client.ts
+  - src/modules/clients/domain/entities/ClientHealthRecord.ts
+  - src/modules/clients/domain/entities/__tests__/Client.test.ts
+  - src/modules/clients/domain/entities/__tests__/ClientHealthRecord.test.ts
+  - src/modules/clients/application/ports/IClientRepository.ts
+  - src/modules/clients/application/dtos/ClientDTO.ts
+  - src/modules/clients/application/use-cases/RegisterClient.ts
+  - src/modules/clients/application/use-cases/ListClients.ts
+  - src/modules/clients/application/use-cases/GetClient.ts
+  - src/modules/clients/application/use-cases/UpdateClient.ts
+  - src/modules/clients/application/use-cases/DeactivateClient.ts
+  - src/modules/clients/application/use-cases/UpdateClientHealthRecord.ts
+  - src/modules/clients/application/use-cases/__tests__/RegisterClient.test.ts
+  - src/modules/clients/application/use-cases/__tests__/ListClients.test.ts
+  - src/modules/clients/application/use-cases/__tests__/GetClient.test.ts
+  - src/modules/clients/application/use-cases/__tests__/UpdateClientHealthRecord.test.ts
+  - src/modules/scheduling/domain/entities/Session.ts
+  - src/modules/scheduling/domain/entities/__tests__/Session.test.ts
+  - src/modules/scheduling/application/ports/ISessionRepository.ts
+  - src/modules/scheduling/application/dtos/SessionDTO.ts
+  - src/modules/scheduling/application/use-cases/ScheduleSession.ts
+  - src/modules/scheduling/application/use-cases/ConfirmSession.ts
+  - src/modules/scheduling/application/use-cases/CompleteSession.ts
+  - src/modules/scheduling/application/use-cases/CancelSession.ts
+  - src/modules/scheduling/application/use-cases/RescheduleSession.ts
+  - src/modules/scheduling/application/use-cases/ListSessions.ts
+  - src/modules/scheduling/application/use-cases/GetSession.ts
+  - src/modules/scheduling/application/use-cases/__tests__/ScheduleSession.test.ts
+  - src/modules/scheduling/application/use-cases/__tests__/CompleteSession.test.ts
+  - src/modules/scheduling/application/use-cases/__tests__/CancelSession.test.ts
+  - src/modules/scheduling/application/use-cases/__tests__/ListSessions.test.ts
+  - src/modules/services/domain/entities/Service.ts
+  - src/modules/services/domain/entities/__tests__/Service.test.ts
+  - src/modules/services/application/ports/IServiceRepository.ts
+  - src/modules/services/application/dtos/ServiceDTO.ts
+  - src/modules/services/application/use-cases/CreateService.ts
+  - src/modules/services/application/use-cases/ListServices.ts
+  - src/modules/services/application/use-cases/UpdateService.ts
+  - src/modules/services/application/use-cases/DeactivateService.ts
+  - src/modules/services/application/use-cases/__tests__/CreateService.test.ts
+  - src/modules/services/application/use-cases/__tests__/ListServices.test.ts
+- Files modified:
+  - prisma/schema.prisma (additive: new models, enums, relations)
+  - src/modules/notifications/infrastructure/repositories/PrismaNotificationLogRepository.ts (tutorId null-safety)
+- Status: DONE

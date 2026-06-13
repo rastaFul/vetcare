@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, PawPrint, Stethoscope, Settings } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { LayoutDashboard, Users, PawPrint, Stethoscope, Settings, Calendar, Briefcase } from 'lucide-react'
 
-const navItems = [
+const vetNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/tutores', label: 'Tutores', icon: Users },
   { href: '/animais', label: 'Animais', icon: PawPrint },
@@ -12,8 +13,20 @@ const navItems = [
   { href: '/configuracoes', label: 'Config', icon: Settings },
 ]
 
+const massageNavItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/clientes', label: 'Clientes', icon: Users },
+  { href: '/agenda', label: 'Agenda', icon: Calendar },
+  { href: '/servicos', label: 'Serviços', icon: Briefcase },
+  { href: '/configuracoes', label: 'Config', icon: Settings },
+]
+
 export function BottomNav() {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const professionType = (session?.user as any)?.professionType ?? 'VETERINARIAN'
+  const navItems = professionType === 'MASSAGE_THERAPIST' ? massageNavItems : vetNavItems
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">

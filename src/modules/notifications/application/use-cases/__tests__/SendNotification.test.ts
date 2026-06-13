@@ -72,7 +72,9 @@ describe('SendNotification use case', () => {
       update: jest.fn().mockResolvedValue(undefined),
       findByTutor: jest.fn().mockResolvedValue([]),
       findByAnimal: jest.fn().mockResolvedValue([]),
+      findByClient: jest.fn().mockResolvedValue([]),
       existsSentToday: jest.fn().mockResolvedValue(false),
+      existsSentTodayForClient: jest.fn().mockResolvedValue(false),
     }
 
     whatsappAdapter = {

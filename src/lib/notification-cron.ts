@@ -2,6 +2,7 @@ import { format, addHours } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { prisma } from '@/lib/prisma'
 import { SendNotification } from '@/modules/notifications/application/use-cases/SendNotification'
+import { SendSessionNotification } from '@/modules/notifications/application/use-cases/SendSessionNotification'
 import { PrismaNotificationLogRepository } from '@/modules/notifications/infrastructure/repositories/PrismaNotificationLogRepository'
 import { EvolutionApiAdapter } from '@/modules/notifications/infrastructure/whatsapp/EvolutionApiAdapter'
 import { ResendAdapter } from '@/modules/notifications/infrastructure/email/ResendAdapter'
@@ -35,6 +36,7 @@ export async function runNotificationCron(): Promise<void> {
 
     const logRepo = new PrismaNotificationLogRepository()
     const useCase = new SendNotification(logRepo, whatsappAdapter, emailAdapter)
+    const sessionUseCase = new SendSessionNotification(logRepo, whatsappAdapter, emailAdapter)
 
     // Consultations: next 24h (±1h tolerance: 23h–25h window)
     const consultStart = addHours(now, 23)
@@ -80,8 +82,36 @@ export async function runNotificationCron(): Promise<void> {
       },
     })
 
+    // Sessions: next 24h (±1h tolerance: 23h–25h window)
+    const sessions = await prisma.appSession.findMany({
+      where: {
+        tenantId: tenant.id,
+        status: { in: ['SCHEDULED', 'CONFIRMED'] },
+        scheduledAt: { gte: consultStart, lte: consultEnd },
+      },
+      include: {
+        client: true,
+        service: true,
+        therapist: true,
+      },
+    })
+
+    // Session returns: next 3 days
+    const sessionReturns = await prisma.appSession.findMany({
+      where: {
+        tenantId: tenant.id,
+        status: { not: 'CANCELLED' },
+        returnDate: { gte: returnStart, lte: returnEnd },
+      },
+      include: {
+        client: true,
+        service: true,
+        therapist: true,
+      },
+    })
+
     console.log(
-      `[Cron] Processing tenant ${tenant.id}: ${consultations.length} consultations, ${vaccinations.length} vaccinations, ${returns.length} returns`,
+      `[Cron] Processing tenant ${tenant.id}: ${consultations.length} consultations, ${vaccinations.length} vaccinations, ${returns.length} returns, ${sessions.length} sessions`,
     )
 
     // Send consultation reminders
@@ -151,6 +181,46 @@ export async function runNotificationCron(): Promise<void> {
           vetName: veterinarian.name ?? 'Dra.',
         },
         referenceId: consultation.id,
+      })
+
+      await sleep(1000)
+    }
+
+    // Send session reminders
+    for (const session of sessions) {
+      const address = session.street
+        ? `${session.street}, ${session.number ?? ''} - ${session.neighborhood ?? ''}, ${session.city ?? ''}`.trim()
+        : undefined
+
+      await sessionUseCase.execute({
+        tenantId: tenant.id,
+        clientId: session.client.id,
+        sessionId: session.id,
+        type: 'SESSION_REMINDER',
+        scheduledAt: session.scheduledAt,
+        serviceName: session.service?.name ?? 'Sessão',
+        therapistName: session.therapist.name ?? 'Terapeuta',
+        tenantName: tenant.name,
+        address,
+      })
+
+      await sleep(1000)
+    }
+
+    // Send session return reminders
+    for (const session of sessionReturns) {
+      if (!session.returnDate) continue
+
+      await sessionUseCase.execute({
+        tenantId: tenant.id,
+        clientId: session.client.id,
+        sessionId: session.id,
+        type: 'SESSION_RETURN_REMINDER',
+        scheduledAt: session.scheduledAt,
+        returnDate: session.returnDate,
+        serviceName: session.service?.name ?? 'Sessão',
+        therapistName: session.therapist.name ?? 'Terapeuta',
+        tenantName: tenant.name,
       })
 
       await sleep(1000)

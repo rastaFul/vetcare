@@ -46,9 +46,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           updateData.role = 'OWNER'
           token.tenantId = tenant.id
           token.role = 'OWNER'
+          token.professionType = 'VETERINARIAN'
         } else {
           token.tenantId = dbUser.tenantId
           token.role = dbUser.role
+          // Load professionType from tenant
+          const tenant = await prisma.tenant.findUnique({
+            where: { id: dbUser.tenantId },
+            select: { professionType: true },
+          })
+          token.professionType = tenant?.professionType ?? 'VETERINARIAN'
         }
 
         // Salvar access_token do Google Calendar (já tem scope calendar.events)
@@ -72,9 +79,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.sub ?? ''
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(session.user as any).tenantId = token.tenantId
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(session.user as any).role = token.role
+        const u = session.user as any
+        u.tenantId = token.tenantId
+        u.role = token.role
+        u.professionType = token.professionType ?? 'VETERINARIAN'
       }
       return session
     },

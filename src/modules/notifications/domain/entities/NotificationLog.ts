@@ -1,13 +1,14 @@
 import { Entity } from '@/shared/domain/Entity'
 
-export type NotificationType = 'CONSULTATION_REMINDER' | 'VACCINATION_REMINDER' | 'RETURN_REMINDER' | 'CUSTOM'
+export type NotificationType = 'CONSULTATION_REMINDER' | 'VACCINATION_REMINDER' | 'RETURN_REMINDER' | 'CUSTOM' | 'SESSION_REMINDER' | 'SESSION_RETURN_REMINDER'
 export type NotificationChannel = 'WHATSAPP' | 'EMAIL'
 export type NotificationStatus = 'PENDING' | 'SENT' | 'FAILED' | 'DELIVERED'
 
 export interface NotificationLogProps {
   tenantId: string
-  tutorId: string
-  animalId: string
+  tutorId?: string
+  clientId?: string
+  animalId?: string
   type: NotificationType
   channel: NotificationChannel
   recipientPhone?: string
@@ -22,6 +23,7 @@ export interface NotificationLogProps {
 export class NotificationLog extends Entity<NotificationLogProps> {
   get tenantId() { return this.props.tenantId }
   get tutorId() { return this.props.tutorId }
+  get clientId() { return this.props.clientId }
   get animalId() { return this.props.animalId }
   get type() { return this.props.type }
   get channel() { return this.props.channel }
