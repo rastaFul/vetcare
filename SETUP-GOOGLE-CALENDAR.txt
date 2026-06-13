@@ -1,0 +1,77 @@
+SETUP MANUAL — Google Calendar via Service Account
+Data: 2026-06-13
+Feature: Substituição do OAuth calendar.events por Service Account
+Objetivo: Remover aviso "App não verificado" do Google no login
+
+==============================================================
+POR QUE ISSO É NECESSÁRIO
+==============================================================
+O escopo calendar.events foi removido do login OAuth.
+O app agora usa uma Service Account para criar/atualizar eventos
+em um calendário dedicado por tenant — sem aviso do Google.
+
+==============================================================
+PASSO 1 — Criar a Service Account no Google Cloud
+==============================================================
+1. Acesse https://console.cloud.google.com
+2. Selecione o projeto do VetCare
+3. Menu: IAM & Admin → Service Accounts
+4. Clique em "Criar conta de serviço"
+   - Nome: vetcare-calendar
+   - ID: vetcare-calendar (gerado automaticamente)
+   - Descrição: Service account para gerenciar Google Calendar do VetCare
+5. Clique em "Concluído" (não precisa dar permissões no projeto)
+6. Na lista, clique na service account criada
+7. Aba "Chaves" → Adicionar chave → Criar nova chave → JSON → Criar
+8. Salve o arquivo JSON baixado em local seguro
+
+==============================================================
+PASSO 2 — Habilitar a Google Calendar API
+==============================================================
+1. No Google Cloud Console, mesmo projeto
+2. APIs & Services → Biblioteca
+3. Pesquise "Google Calendar API"
+4. Clique → Ativar
+
+==============================================================
+PASSO 3 — Configurar variáveis de ambiente no servidor
+==============================================================
+Abrir o arquivo .env do projeto vetcare e adicionar:
+
+  GOOGLE_SERVICE_ACCOUNT_EMAIL=<email da service account criada>
+  Exemplo: vetcare-calendar@meu-projeto-123.iam.gserviceaccount.com
+
+  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="<chave privada do JSON>"
+  - Abrir o arquivo JSON baixado no passo 1
+  - Copiar o valor do campo "private_key" (começa com -----BEGIN RSA PRIVATE KEY-----)
+  - Colar entre aspas duplas, mantendo os \n literais
+
+Após salvar o .env:
+  pm2 restart vetcare
+
+==============================================================
+PASSO 4 — Criar o calendário no app
+==============================================================
+1. Acesse https://vetcare.rastaful.dev
+2. Faça login
+3. Vá em Configurações → aba Calendário
+4. Clique em "Criar Calendário VetCare"
+5. O app cria automaticamente um Google Calendar dedicado
+6. Um link de inscrição será exibido — você pode assiná-lo
+   no seu Google Calendar pessoal para ver os eventos lá também
+
+==============================================================
+PASSO 5 — Limpar OAuth Consent Screen (opcional)
+==============================================================
+1. Google Cloud Console → APIs & Services → OAuth consent screen
+2. Editar escopos → remover "calendar.events" (não é mais usado)
+3. Salvar
+
+==============================================================
+OBSERVAÇÕES
+==============================================================
+- O login do app NÃO mostra mais aviso do Google após o passo 3
+- O calendário criado (passo 4) é separado do seu calendário pessoal
+- Eventos de consultas e sessões são criados automaticamente no calendário do VetCare
+- Falha no calendário NÃO bloqueia criação de consultas (best-effort)
+- Cada tenant tem seu próprio calendário Google
