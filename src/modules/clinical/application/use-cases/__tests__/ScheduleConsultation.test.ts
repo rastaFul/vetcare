@@ -40,18 +40,18 @@ class InMemoryAnimalRepository implements IAnimalRepository {
 }
 
 class MockCalendarService implements ICalendarService {
-  createdEvents: { dto: CalendarEventDTO; token: string }[] = []
+  createdEvents: { dto: CalendarEventDTO; calendarId: string }[] = []
   shouldFail = false
 
-  async createEvent(dto: CalendarEventDTO, token: string): Promise<string> {
+  async createEvent(dto: CalendarEventDTO, calendarId: string): Promise<string> {
     if (this.shouldFail) throw new Error('Calendar API error')
-    this.createdEvents.push({ dto, token })
+    this.createdEvents.push({ dto, calendarId })
     return `mock-event-${Date.now()}`
   }
   async updateEvent() {}
   async deleteEvent() {}
-  async createReminder(dto: CalendarEventDTO, token: string) {
-    return this.createEvent(dto, token)
+  async createReminder(dto: CalendarEventDTO, calendarId: string) {
+    return this.createEvent(dto, calendarId)
   }
 }
 
@@ -120,15 +120,16 @@ describe('ScheduleConsultation', () => {
     ).rejects.toThrow(ValidationError)
   })
 
-  it('should create calendar event when createCalendarEvent=true and token provided', async () => {
+  it('should create calendar event when createCalendarEvent=true and calendarId provided', async () => {
     const future = new Date(Date.now() + 86400000).toISOString()
     const result = await useCase.execute(
       'tenant-1',
       'vet-1',
       { animalId: 'animal-1', scheduledAt: future, createCalendarEvent: true },
-      'access-token'
+      'cal-id-123'
     )
     expect(calendarService.createdEvents).toHaveLength(1)
+    expect(calendarService.createdEvents[0].calendarId).toBe('cal-id-123')
     expect(result.googleCalendarEventId).toBeDefined()
   })
 
@@ -139,14 +140,14 @@ describe('ScheduleConsultation', () => {
       'tenant-1',
       'vet-1',
       { animalId: 'animal-1', scheduledAt: future, createCalendarEvent: true },
-      'access-token'
+      'cal-id-123'
     )
     expect(result.status).toBe('SCHEDULED')
     expect(consultationRepo.consultations).toHaveLength(1)
     expect(result.googleCalendarEventId).toBeUndefined()
   })
 
-  it('should not create calendar event when no token provided', async () => {
+  it('should not create calendar event when no calendarId provided', async () => {
     const future = new Date(Date.now() + 86400000).toISOString()
     await useCase.execute('tenant-1', 'vet-1', {
       animalId: 'animal-1',

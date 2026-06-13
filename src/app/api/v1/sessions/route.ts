@@ -3,6 +3,7 @@ import { apiSuccess, apiList, apiError } from '@/shared/infrastructure/api-respo
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaSessionRepository } from '@/modules/scheduling/infrastructure/repositories/PrismaSessionRepository'
 import { PrismaServiceRepository } from '@/modules/services/infrastructure/repositories/PrismaServiceRepository'
+import { GoogleCalendarServiceAccountAdapter } from '@/modules/clinical/infrastructure/calendar/GoogleCalendarServiceAccountAdapter'
 import { ScheduleSession } from '@/modules/scheduling/application/use-cases/ScheduleSession'
 import { ListSessions } from '@/modules/scheduling/application/use-cases/ListSessions'
 import { ScheduleSessionSchema } from '@/modules/scheduling/application/dtos/SessionDTO'
@@ -11,6 +12,7 @@ import { Session } from '@/modules/scheduling/domain/entities/Session'
 
 const sessionRepo = new PrismaSessionRepository()
 const serviceRepo = new PrismaServiceRepository()
+const calendarService = new GoogleCalendarServiceAccountAdapter()
 
 export async function GET(req: NextRequest) {
   try {
@@ -50,13 +52,21 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const input = ScheduleSessionSchema.parse(body)
 
-    const useCase = new ScheduleSession(sessionRepo, serviceRepo, null, prisma)
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: authSession.tenantId },
+      select: { googleCalendarId: true },
+    })
+    const calendarId = tenant?.googleCalendarId ?? undefined
+
+    const useCase = new ScheduleSession(sessionRepo, serviceRepo, calendarService, prisma)
     const session = await useCase.execute({
       tenantId: authSession.tenantId,
       therapistId: authSession.userId,
       ...input,
       scheduledAt: new Date(input.scheduledAt),
       serviceId: input.serviceId || undefined,
+      createCalendarEvent: Boolean(calendarId),
+      calendarId,
     })
 
     return apiSuccess(sessionToDTO(session), 201)

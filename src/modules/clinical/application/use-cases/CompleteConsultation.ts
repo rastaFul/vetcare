@@ -13,7 +13,7 @@ export class CompleteConsultation {
     id: string,
     tenantId: string,
     input: CompleteConsultationInput,
-    calendarToken?: string
+    calendarId?: string
   ): Promise<void> {
     const consultation = await this.consultationRepo.findById(id, tenantId)
     if (!consultation) throw new NotFoundError('Consulta')
@@ -28,7 +28,7 @@ export class CompleteConsultation {
     await this.consultationRepo.update(consultation)
 
     // Criar lembrete de retorno no Calendar (best-effort)
-    if (input.createReturnReminder && input.returnDate && this.calendarService && calendarToken) {
+    if (input.createReturnReminder && input.returnDate && this.calendarService && calendarId) {
       try {
         const returnDate = new Date(input.returnDate)
         const eventId = await this.calendarService.createReminder(
@@ -37,7 +37,7 @@ export class CompleteConsultation {
             startAt: returnDate,
             endAt: new Date(returnDate.getTime() + 30 * 60 * 1000),
           },
-          calendarToken
+          calendarId
         )
         consultation.setReturnEventId(eventId)
         await this.consultationRepo.update(consultation)

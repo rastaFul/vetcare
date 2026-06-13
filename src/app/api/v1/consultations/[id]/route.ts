@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaConsultationRepository } from '@/modules/clinical/infrastructure/repositories/PrismaConsultationRepository'
-import { GoogleCalendarAdapter } from '@/modules/clinical/infrastructure/calendar/GoogleCalendarAdapter'
+import { GoogleCalendarServiceAccountAdapter } from '@/modules/clinical/infrastructure/calendar/GoogleCalendarServiceAccountAdapter'
 import { GetConsultation } from '@/modules/clinical/application/use-cases/GetConsultation'
 import { RescheduleConsultation } from '@/modules/clinical/application/use-cases/RescheduleConsultation'
 import { UpdateConsultationSchema } from '@/modules/clinical/application/dtos/ConsultationDTO'
@@ -10,7 +10,7 @@ import { Consultation } from '@/modules/clinical/domain/entities/Consultation'
 import { prisma } from '@/lib/prisma'
 
 const consultationRepo = new PrismaConsultationRepository()
-const calendarService = new GoogleCalendarAdapter()
+const calendarService = new GoogleCalendarServiceAccountAdapter()
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -65,11 +65,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
     const input = UpdateConsultationSchema.parse(body)
 
-    const user = await prisma.user.findFirst({ where: { id: session.userId } })
-    const calendarToken = user?.googleCalendarToken ?? undefined
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: session.tenantId },
+      select: { googleCalendarId: true },
+    })
+    const calendarId = tenant?.googleCalendarId ?? undefined
 
     const useCase = new RescheduleConsultation(consultationRepo, calendarService)
-    await useCase.execute(id, session.tenantId, input, calendarToken ?? undefined)
+    await useCase.execute(id, session.tenantId, input, calendarId)
 
     const getUseCase = new GetConsultation(consultationRepo)
     const consultation = await getUseCase.execute(id, session.tenantId)

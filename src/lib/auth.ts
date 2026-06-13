@@ -1,5 +1,4 @@
 import NextAuth from 'next-auth'
-import type { JWT } from 'next-auth/jwt'
 import Google from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from './prisma'
@@ -13,7 +12,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: 'openid email profile https://www.googleapis.com/auth/calendar.events',
+          scope: 'openid email profile',
         },
       },
     }),
@@ -22,7 +21,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: 'jwt' },
   callbacks: {
     // jwt: cria/atualiza o token
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user?.id) {
         // Primeiro login: user vem do adapter (acaba de ser criado no DB)
         token.sub = user.id
@@ -56,12 +55,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             select: { professionType: true },
           })
           token.professionType = tenant?.professionType ?? 'VETERINARIAN'
-        }
-
-        // Salvar access_token do Google Calendar (já tem scope calendar.events)
-        if (account?.access_token) {
-          updateData.googleCalendarToken = account.access_token
-          token.calendarConnected = true
         }
 
         if (Object.keys(updateData).length > 0) {

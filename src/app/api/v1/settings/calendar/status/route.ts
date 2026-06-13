@@ -5,14 +5,15 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const session = await getAuthSession()
-    const user = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { googleCalendarToken: true, email: true },
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: session.tenantId },
+      select: { googleCalendarId: true, googleCalendarShareUrl: true },
     })
-    const connected = Boolean(user?.googleCalendarToken)
+    const connected = Boolean(tenant?.googleCalendarId)
     return apiSuccess({
       connected,
-      email: connected ? user?.email : undefined,
+      calendarId: tenant?.googleCalendarId ?? null,
+      shareUrl: tenant?.googleCalendarShareUrl ?? null,
     })
   } catch (e) {
     return apiError(e)

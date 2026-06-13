@@ -16,7 +16,7 @@ export class ScheduleConsultation {
     tenantId: string,
     veterinarianId: string,
     input: ScheduleConsultationInput,
-    calendarToken?: string
+    calendarId?: string
   ): Promise<Consultation> {
     const animal = await this.animalRepo.findById(input.animalId, tenantId)
     if (!animal) throw new NotFoundError('Animal')
@@ -46,7 +46,7 @@ export class ScheduleConsultation {
     await this.consultationRepo.save(consultation)
 
     // Sync Google Calendar (best-effort — não bloqueia se falhar)
-    if (input.createCalendarEvent && this.calendarService && calendarToken) {
+    if (input.createCalendarEvent && this.calendarService && calendarId) {
       try {
         const endAt = new Date(scheduledAt.getTime() + 60 * 60 * 1000) // +1h
         const eventId = await this.calendarService.createEvent(
@@ -59,7 +59,7 @@ export class ScheduleConsultation {
               ? `${input.street}, ${input.number ?? ''}`
               : undefined,
           },
-          calendarToken
+          calendarId
         )
         consultation.setCalendarEventId(eventId)
         await this.consultationRepo.update(consultation)

@@ -20,7 +20,7 @@ export interface ScheduleSessionInput {
   zipCode?: string
   notes?: string
   createCalendarEvent?: boolean
-  calendarToken?: string
+  calendarId?: string
 }
 
 export class ScheduleSession {
@@ -61,7 +61,7 @@ export class ScheduleSession {
 
     await this.sessionRepo.save(session)
 
-    if (input.createCalendarEvent && this.calendarService && input.calendarToken) {
+    if (input.createCalendarEvent && this.calendarService && input.calendarId) {
       try {
         const durationMs = 60 * 60 * 1000
         const eventId = await this.calendarService.createEvent(
@@ -72,7 +72,7 @@ export class ScheduleSession {
             endAt: new Date(input.scheduledAt.getTime() + durationMs),
             location: input.street ? `${input.street}, ${input.number ?? ''}` : undefined,
           },
-          input.calendarToken
+          input.calendarId
         )
         session.setCalendarEventId(eventId)
         await this.sessionRepo.update(session)

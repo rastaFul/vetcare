@@ -7,8 +7,9 @@ export interface CalendarEventDTO {
 }
 
 export interface ICalendarService {
-  createEvent(dto: CalendarEventDTO, accessToken: string): Promise<string>
-  updateEvent(eventId: string, dto: Partial<CalendarEventDTO>, accessToken: string): Promise<void>
-  deleteEvent(eventId: string, accessToken: string): Promise<void>
-  createReminder(dto: CalendarEventDTO, accessToken: string): Promise<string>
+  createEvent(dto: CalendarEventDTO, calendarId: string): Promise<string>
+  updateEvent(eventId: string, dto: Partial<CalendarEventDTO>, calendarId: string): Promise<void>
+  deleteEvent(eventId: string, calendarId: string): Promise<void>
+  createReminder(dto: CalendarEventDTO, calendarId: string): Promise<string>
+  createTenantCalendar?(tenantName: string): Promise<{ calendarId: string; shareUrl: string }>
 }

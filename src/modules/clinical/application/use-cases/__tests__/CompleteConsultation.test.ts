@@ -23,18 +23,18 @@ class InMemoryConsultationRepository implements IConsultationRepository {
 }
 
 class MockCalendarService implements ICalendarService {
-  createdReminders: { dto: CalendarEventDTO; token: string }[] = []
+  createdReminders: { dto: CalendarEventDTO; calendarId: string }[] = []
   shouldFail = false
 
-  async createEvent(dto: CalendarEventDTO, token: string): Promise<string> {
+  async createEvent(_dto: CalendarEventDTO, _calendarId: string): Promise<string> {
     if (this.shouldFail) throw new Error('Calendar error')
     return `event-${Date.now()}`
   }
   async updateEvent() {}
   async deleteEvent() {}
-  async createReminder(dto: CalendarEventDTO, token: string): Promise<string> {
+  async createReminder(dto: CalendarEventDTO, calendarId: string): Promise<string> {
     if (this.shouldFail) throw new Error('Calendar error')
-    this.createdReminders.push({ dto, token })
+    this.createdReminders.push({ dto, calendarId })
     return `reminder-${Date.now()}`
   }
 }
@@ -115,7 +115,7 @@ describe('CompleteConsultation', () => {
     ).rejects.toThrow()
   })
 
-  it('should create return reminder when returnDate and createReturnReminder=true', async () => {
+  it('should create return reminder when returnDate and createReturnReminder=true and calendarId provided', async () => {
     const consultation = makeScheduledConsultation()
     repo.consultations.push(consultation)
     const returnDate = new Date(Date.now() + 7 * 86400000).toISOString()
@@ -129,10 +129,11 @@ describe('CompleteConsultation', () => {
         returnDate,
         createReturnReminder: true,
       },
-      'access-token'
+      'tenant-calendar-id'
     )
 
     expect(calendarService.createdReminders).toHaveLength(1)
+    expect(calendarService.createdReminders[0].calendarId).toBe('tenant-calendar-id')
     const updated = repo.consultations[0]
     expect(updated.returnEventId).toBeDefined()
   })
@@ -152,10 +153,25 @@ describe('CompleteConsultation', () => {
         returnDate,
         createReturnReminder: true,
       },
-      'access-token'
+      'tenant-calendar-id'
     )
 
     expect(repo.consultations[0].status).toBe('COMPLETED')
     expect(repo.consultations[0].returnEventId).toBeUndefined()
+  })
+
+  it('should not create reminder when no calendarId provided', async () => {
+    const consultation = makeScheduledConsultation()
+    repo.consultations.push(consultation)
+    const returnDate = new Date(Date.now() + 7 * 86400000).toISOString()
+
+    await useCase.execute('c-1', 'tenant-1', {
+      anamnesis: 'OK',
+      diagnosis: 'OK',
+      returnDate,
+      createReturnReminder: true,
+    })
+
+    expect(calendarService.createdReminders).toHaveLength(0)
   })
 })

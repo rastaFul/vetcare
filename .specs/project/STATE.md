@@ -56,6 +56,11 @@
 - tsc: PASS (0 errors)
 - jest: PASS (221/221, 46 suites)
 
+## Feature: Google Calendar via Service Account
+- Spec: APPROVED ✅ — `.specs/features/google-calendar-service-account/spec.md`
+- Status: DONE ✅ — 2026-06-13
+- Tasks 1-9: DONE — 230/230 tests, tsc 0 errors
+
 ## Próximo
 - Webhook Spec Fase 2 (tutor responde "1 para confirmar") → `.specs/features/notifications/spec-webhook.md`
 - Configurar Evolution API: `cd /home/rodrigo/services/evolution && docker compose up -d`

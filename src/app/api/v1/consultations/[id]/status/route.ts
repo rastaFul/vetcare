@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaConsultationRepository } from '@/modules/clinical/infrastructure/repositories/PrismaConsultationRepository'
-import { GoogleCalendarAdapter } from '@/modules/clinical/infrastructure/calendar/GoogleCalendarAdapter'
+import { GoogleCalendarServiceAccountAdapter } from '@/modules/clinical/infrastructure/calendar/GoogleCalendarServiceAccountAdapter'
 import { ConfirmConsultation } from '@/modules/clinical/application/use-cases/ConfirmConsultation'
 import { CompleteConsultation } from '@/modules/clinical/application/use-cases/CompleteConsultation'
 import { CancelConsultation } from '@/modules/clinical/application/use-cases/CancelConsultation'
@@ -12,7 +12,7 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 const consultationRepo = new PrismaConsultationRepository()
-const calendarService = new GoogleCalendarAdapter()
+const calendarService = new GoogleCalendarServiceAccountAdapter()
 
 const StatusPatchSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('CONFIRMED') }),
@@ -27,8 +27,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json()
     const input = StatusPatchSchema.parse(body)
 
-    const user = await prisma.user.findFirst({ where: { id: session.userId } })
-    const calendarToken = user?.googleCalendarToken ?? undefined
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: session.tenantId },
+      select: { googleCalendarId: true },
+    })
+    const calendarId = tenant?.googleCalendarId ?? undefined
 
     switch (input.status) {
       case 'CONFIRMED': {
@@ -44,12 +47,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           observations: input.observations,
           returnDate: input.returnDate,
           createReturnReminder: input.createReturnReminder,
-        }, calendarToken ?? undefined)
+        }, calendarId)
         break
       }
       case 'CANCELLED': {
         const useCase = new CancelConsultation(consultationRepo, calendarService)
-        await useCase.execute(id, session.tenantId, calendarToken ?? undefined)
+        await useCase.execute(id, session.tenantId, calendarId)
         break
       }
       default:

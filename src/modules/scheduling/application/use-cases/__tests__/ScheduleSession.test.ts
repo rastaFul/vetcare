@@ -30,7 +30,7 @@ const makeCalendarService = (): jest.Mocked<ICalendarService> => ({
 
 const makePrismaClient = (clientExists: boolean) => ({
   client: {
-    findFirst: jest.fn().mockResolvedValue(clientExists ? { id: 'client-1', tenantId: 'tenant-1' } : null),
+    findFirst: jest.fn().mockResolvedValue(clientExists ? { id: 'client-1', tenantId: 'tenant-1', name: 'João' } : null),
   },
 })
 
@@ -83,14 +83,28 @@ describe('ScheduleSession use case', () => {
     expect(result.serviceId).toBe(activeService.id)
   })
 
-  it('createCalendarEvent=true → calendar.createEvent called', async () => {
+  it('createCalendarEvent=true with calendarId → calendar.createEvent called', async () => {
     const sessionRepo = makeSessionRepo()
     const serviceRepo = makeServiceRepo()
     const calendar = makeCalendarService()
     const prisma = makePrismaClient(true)
     const useCase = new ScheduleSession(sessionRepo, serviceRepo, calendar, prisma as never)
-    const result = await useCase.execute({ ...baseInput, createCalendarEvent: true, calendarToken: 'tok' })
-    expect(calendar.createEvent).toHaveBeenCalled()
+    const result = await useCase.execute({ ...baseInput, createCalendarEvent: true, calendarId: 'tenant-cal-id' })
+    expect(calendar.createEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringContaining('Sessão') }),
+      'tenant-cal-id'
+    )
     expect(result.googleCalendarEventId).toBe('event-id-123')
+  })
+
+  it('createCalendarEvent=true without calendarId → calendar.createEvent NOT called', async () => {
+    const sessionRepo = makeSessionRepo()
+    const serviceRepo = makeServiceRepo()
+    const calendar = makeCalendarService()
+    const prisma = makePrismaClient(true)
+    const useCase = new ScheduleSession(sessionRepo, serviceRepo, calendar, prisma as never)
+    const result = await useCase.execute({ ...baseInput, createCalendarEvent: true })
+    expect(calendar.createEvent).not.toHaveBeenCalled()
+    expect(result.googleCalendarEventId).toBeUndefined()
   })
 })

@@ -3,7 +3,7 @@ import { apiSuccess, apiList, apiError } from '@/shared/infrastructure/api-respo
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaConsultationRepository } from '@/modules/clinical/infrastructure/repositories/PrismaConsultationRepository'
 import { PrismaAnimalRepository } from '@/modules/patients/infrastructure/repositories/PrismaAnimalRepository'
-import { GoogleCalendarAdapter } from '@/modules/clinical/infrastructure/calendar/GoogleCalendarAdapter'
+import { GoogleCalendarServiceAccountAdapter } from '@/modules/clinical/infrastructure/calendar/GoogleCalendarServiceAccountAdapter'
 import { ScheduleConsultation } from '@/modules/clinical/application/use-cases/ScheduleConsultation'
 import { ListConsultations } from '@/modules/clinical/application/use-cases/ListConsultations'
 import { ScheduleConsultationSchema } from '@/modules/clinical/application/dtos/ConsultationDTO'
@@ -12,7 +12,7 @@ import { prisma } from '@/lib/prisma'
 
 const consultationRepo = new PrismaConsultationRepository()
 const animalRepo = new PrismaAnimalRepository()
-const calendarService = new GoogleCalendarAdapter()
+const calendarService = new GoogleCalendarServiceAccountAdapter()
 
 export async function GET(req: NextRequest) {
   try {
@@ -47,16 +47,19 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const input = ScheduleConsultationSchema.parse(body)
 
-    // Get calendar token if available
-    const user = await prisma.user.findFirst({ where: { id: session.userId } })
-    const calendarToken = user?.googleCalendarToken ?? undefined
+    // Get tenant's calendar ID
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: session.tenantId },
+      select: { googleCalendarId: true },
+    })
+    const calendarId = tenant?.googleCalendarId ?? undefined
 
     const useCase = new ScheduleConsultation(consultationRepo, animalRepo, calendarService)
     const consultation = await useCase.execute(
       session.tenantId,
       session.userId,
       input,
-      calendarToken ?? undefined
+      calendarId
     )
 
     return apiSuccess(consultationToDTO(consultation), 201)

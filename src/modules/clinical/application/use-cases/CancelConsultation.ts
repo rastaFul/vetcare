@@ -8,7 +8,7 @@ export class CancelConsultation {
     private readonly calendarService: ICalendarService | null
   ) {}
 
-  async execute(id: string, tenantId: string, calendarToken?: string): Promise<void> {
+  async execute(id: string, tenantId: string, calendarId?: string): Promise<void> {
     const consultation = await this.consultationRepo.findById(id, tenantId)
     if (!consultation) throw new NotFoundError('Consulta')
 
@@ -17,9 +17,9 @@ export class CancelConsultation {
     await this.consultationRepo.update(consultation)
 
     // Deletar evento no Google Calendar (best-effort)
-    if (calendarEventId && this.calendarService && calendarToken) {
+    if (calendarEventId && this.calendarService && calendarId) {
       try {
-        await this.calendarService.deleteEvent(calendarEventId, calendarToken)
+        await this.calendarService.deleteEvent(calendarEventId, calendarId)
       } catch {
         // best-effort
       }

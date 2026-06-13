@@ -260,3 +260,59 @@ Iniciado: 2026-06-04T14:32:18-03:00
   - prisma/schema.prisma (additive: new models, enums, relations)
   - src/modules/notifications/infrastructure/repositories/PrismaNotificationLogRepository.ts (tutorId null-safety)
 - Status: DONE
+
+## Feature: Google Calendar Service Account — 2026-06-13T17:29:00-03:00
+
+### Task 1: Migration Prisma
+- Migration `20260613000000_remove_calendar_token_add_calendar_id`: PASS
+- Removed: User.googleCalendarToken, User.googleCalendarRefresh
+- Added: Tenant.googleCalendarId, Tenant.googleCalendarShareUrl
+- prisma generate: PASS
+
+### Task 2: GoogleCalendarServiceAccountAdapter
+- Created: src/modules/clinical/infrastructure/calendar/GoogleCalendarServiceAccountAdapter.ts
+- JWT auth via fetch puro (sem googleapis dependency)
+- Implements: createEvent, updateEvent, deleteEvent, createReminder, createTenantCalendar
+- ICalendarService port updated: accessToken → calendarId, added createTenantCalendar?
+
+### Task 3: Use cases clínicos atualizados
+- ScheduleConsultation: calendarToken → calendarId
+- CancelConsultation: calendarToken → calendarId
+- RescheduleConsultation: calendarToken → calendarId
+- CompleteConsultation: calendarToken → calendarId
+
+### Task 4: ScheduleSession atualizado
+- calendarToken → calendarId
+
+### Task 5: auth.ts limpo
+- Removido scope calendar.events
+- Removido bloco googleCalendarToken
+- Removido token.calendarConnected
+
+### Task 6: API calendar status + setup
+- GET /api/v1/settings/calendar/status: retorna { connected, calendarId, shareUrl }
+- POST /api/v1/settings/calendar/setup: cria calendário via service account (idempotente)
+
+### Task 7: API routes atualizadas
+- consultations/route.ts: usa GoogleCalendarServiceAccountAdapter + tenant.googleCalendarId
+- consultations/[id]/route.ts: idem
+- consultations/[id]/status/route.ts: idem
+- sessions/route.ts: idem + auto-cria evento se calendarId disponível
+
+### Task 8: UI configuracoes
+- Calendário tab: botão "Criar Calendário VetCare" quando sem calendário
+- Status ativo: mostra calendarId + shareUrl + link "Ver no Google Calendar"
+
+### Task 9: Testes atualizados
+- ScheduleConsultation.test.ts: token → calendarId
+- CancelConsultation.test.ts: token → calendarId, + test sem calendarId
+- CompleteConsultation.test.ts: token → calendarId, + test sem calendarId
+- ScheduleSession.test.ts: calendarToken → calendarId
+- GoogleCalendarServiceAccountAdapter.test.ts: NOVO — 5 tests
+
+### Gates Finais — 2026-06-13T17:29:00-03:00
+- tsc --noEmit: PASS (0 errors)
+- npm run lint: PASS (warnings pre-existentes, 0 errors)
+- npm test: PASS (230/230, 47 suites)
+- pm2 restart vetcare: PASS (Ready in 1134ms)
+- Status: DONE

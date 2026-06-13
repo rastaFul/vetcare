@@ -23,11 +23,11 @@ class InMemoryConsultationRepository implements IConsultationRepository {
 }
 
 class MockCalendarService implements ICalendarService {
-  deletedEvents: string[] = []
+  deletedEvents: Array<{ eventId: string; calendarId: string }> = []
 
   async createEvent(): Promise<string> { return 'event-id' }
   async updateEvent() {}
-  async deleteEvent(eventId: string) { this.deletedEvents.push(eventId) }
+  async deleteEvent(eventId: string, calendarId: string) { this.deletedEvents.push({ eventId, calendarId }) }
   async createReminder(): Promise<string> { return 'reminder-id' }
 }
 
@@ -76,18 +76,28 @@ describe('CancelConsultation', () => {
     await expect(useCase.execute('non-existent', 'tenant-1')).rejects.toThrow(NotFoundError)
   })
 
-  it('should call deleteEvent on calendar when googleCalendarEventId exists', async () => {
+  it('should call deleteEvent on calendar when googleCalendarEventId exists and calendarId provided', async () => {
     repo.consultations.push(makeScheduledConsultation('c-1', 'gcal-event-123'))
 
-    await useCase.execute('c-1', 'tenant-1', 'access-token')
+    await useCase.execute('c-1', 'tenant-1', 'tenant-calendar-id')
 
-    expect(calendarService.deletedEvents).toContain('gcal-event-123')
+    expect(calendarService.deletedEvents).toHaveLength(1)
+    expect(calendarService.deletedEvents[0].eventId).toBe('gcal-event-123')
+    expect(calendarService.deletedEvents[0].calendarId).toBe('tenant-calendar-id')
   })
 
   it('should not call deleteEvent when no calendar event id', async () => {
     repo.consultations.push(makeScheduledConsultation('c-1'))
 
-    await useCase.execute('c-1', 'tenant-1', 'access-token')
+    await useCase.execute('c-1', 'tenant-1', 'tenant-calendar-id')
+
+    expect(calendarService.deletedEvents).toHaveLength(0)
+  })
+
+  it('should not call deleteEvent when no calendarId provided', async () => {
+    repo.consultations.push(makeScheduledConsultation('c-1', 'gcal-event-123'))
+
+    await useCase.execute('c-1', 'tenant-1')
 
     expect(calendarService.deletedEvents).toHaveLength(0)
   })

@@ -27,6 +27,9 @@ model Tenant {
   professionType        ProfessionType @default(VETERINARIAN)
   professionalRegLabel  String?        // "CRMV", "CRP", "CMT" etc
 
+  googleCalendarId      String?
+  googleCalendarShareUrl String?
+
   users         User[]
   tutors        Tutor[]
   animals       Animal[]
@@ -50,8 +53,6 @@ model User {
   specialty             String?
   signatureUrl          String?
   googleId              String?
-  googleCalendarToken   String?
-  googleCalendarRefresh String?
   image                 String?
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt

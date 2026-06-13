@@ -14,7 +14,7 @@ export class RescheduleConsultation {
     id: string,
     tenantId: string,
     input: UpdateConsultationInput,
-    calendarToken?: string
+    calendarId?: string
   ): Promise<void> {
     const consultation = await this.consultationRepo.findById(id, tenantId)
     if (!consultation) throw new NotFoundError('Consulta')
@@ -43,7 +43,7 @@ export class RescheduleConsultation {
     await this.consultationRepo.update(consultation)
 
     // Update calendar event (best-effort)
-    if (consultation.googleCalendarEventId && this.calendarService && calendarToken) {
+    if (consultation.googleCalendarEventId && this.calendarService && calendarId) {
       try {
         const updatePayload: Parameters<ICalendarService['updateEvent']>[1] = {}
         if (scheduledAt) {
@@ -53,7 +53,7 @@ export class RescheduleConsultation {
         await this.calendarService.updateEvent(
           consultation.googleCalendarEventId,
           updatePayload,
-          calendarToken
+          calendarId
         )
       } catch {
         // best-effort
