@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  app:
+    uses: rastaFul/infra-platform/.github/workflows/reusable-ci.yml@master
+    with:
+      working-directory: .
+      package-manager: npm
+      dockerfile: Dockerfile
+      docker-context: .
