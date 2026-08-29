@@ -28,5 +28,28 @@ services:
       POSTGRES_USER: vetcare
       POSTGRES_PASSWORD: vetcare_secret
 
+  # Added 2026-08-28 (migration off PM2, see infra-platform
+  # .specs/features/local-boot-persistence/spec.md). Filename kept as-is.
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vetcare
+    ports:
+      - "127.0.0.1:3004:3004"
+    env_file:
+      - ./.env
+    environment:
+      # .env has DATABASE_URL pointing at localhost:5432 (bare PM2 process,
+      # same host namespace as the published postgres port). Containerized,
+      # postgres is reached by its Compose service name on the shared
+      # default network instead.
+      - DATABASE_URL=postgresql://vetcare:vetcare_secret@postgres:5432/vetcare_dev
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_dev_data:
