@@ -41,7 +41,16 @@ USER appuser
 
 EXPOSE 3004
 
+# /api/health (not root "/") -- root 307-redirects via NextAuth to the
+# ABSOLUTE public URL (NEXTAUTH_URL, e.g. https://vetcare.rastaful.dev),
+# which wget --spider follows -- meaning liveness depended on outbound
+# internet + the Cloudflare Tunnel being up, backwards for a container
+# healthcheck. Found 2026-08-28 while debugging a real tunnel outage:
+# this container falsely reported "unhealthy" even though the app itself
+# was fine, confusing the actual diagnosis. Every other app in this infra
+# already uses a dedicated /api/health or /health endpoint for this
+# reason (see infra-platform docs/reference/docker-build-conventions.md).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -q --spider http://localhost:3004 || exit 1
+  CMD wget -q --spider http://localhost:3004/api/health || exit 1
 
 CMD ["node_modules/.bin/next", "start", "-p", "3004"]
