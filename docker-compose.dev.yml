@@ -1,7 +1,16 @@
 version: '3.9'
 
 networks:
-  default: {}
+  # Named explicitly 2026-08-29 -- was relying on Compose's implicit
+  # "vetcare_default" name, the only one of the 4 products not following
+  # the <project>_net convention (microgrow_net, artists_net,
+  # rastafinancas_net) documented in
+  # infra-platform/docs/reference/repository-layout.md. Purely cosmetic --
+  # isolation was already correct either way, this just makes the name
+  # match the convention.
+  default:
+    name: vetcare_net
+    driver: bridge
   platform_net:
     name: platform_net
     external: true   # owned by infra-platform/platform/docker-compose.yml, reach loki:3100
