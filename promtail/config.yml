@@ -1,0 +1,45 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/promtail/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Created 2026-08-29 (infra-platform features/observability-promtail-docker/
+  # spec.md) -- vetcare never had log shipping to Loki before. Same
+  # docker_sd_configs pattern already proven in rastafinancas/microgrow.
+  - job_name: vetcare-docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        filters:
+          - name: name
+            # ^vetcare$ (anchored), not "vetcare" -- Docker's name filter
+            # does substring matching. Found this the hard way 2026-08-29:
+            # an unanchored "vetcare" also matched vetcare-postgres-1,
+            # vetcare-postgres_test-1, AND vetcare-promtail itself
+            # (self-scraping -- promtail shipping its own "shipping a
+            # batch" logs back to itself, a feedback loop that could
+            # balloon log volume over time). No output ever reached Loki
+            # while this was broken; every startup batch failed silently
+            # (truncated "final error sending batch" in promtail's own
+            # logs, root cause only found via a raw curl push test that
+            # proved connectivity was fine).
+            values:
+              - "^vetcare$"
+    relabel_configs:
+      - source_labels: [__meta_docker_container_name]
+        target_label: container
+        regex: /(.+)
+        replacement: $1
+      - source_labels: [__meta_docker_container_name]
+        target_label: service
+        regex: /(.+)
+        replacement: $1
+      - target_label: app
+        replacement: vetcare
+    pipeline_stages:
+      - docker: {}

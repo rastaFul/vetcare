@@ -1,5 +1,11 @@
 version: '3.9'
 
+networks:
+  default: {}
+  platform_net:
+    name: platform_net
+    external: true   # owned by infra-platform/platform/docker-compose.yml, reach loki:3100
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -51,5 +57,22 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Added 2026-08-29 (features/observability-promtail-docker/spec.md in
+  # infra-platform). vetcare never had log shipping to Loki before --
+  # same docker_sd_configs pattern already proven in
+  # rastafinancas/microgrow's promtails.
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: vetcare-promtail
+    networks:
+      - platform_net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+      - promtail_positions:/tmp/promtail
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+
 volumes:
   postgres_dev_data:
+  promtail_positions:
