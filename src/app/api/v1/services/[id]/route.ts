@@ -5,10 +5,12 @@ import { PrismaServiceRepository } from '@/modules/services/infrastructure/repos
 import { UpdateService } from '@/modules/services/application/use-cases/UpdateService'
 import { UpdateServiceSchema } from '@/modules/services/application/dtos/ServiceDTO'
 import { Service } from '@/modules/services/domain/entities/Service'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaServiceRepository()
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -23,6 +25,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/services/:id", PUT_impl)
+
 
 function serviceToDTO(s: Service) {
   return {

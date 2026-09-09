@@ -27,6 +27,11 @@ export const authConfig: NextAuthConfig = {
         nextUrl.pathname.startsWith('/api/auth') ||
         nextUrl.pathname === '/login' ||
         nextUrl.pathname === '/api/health' ||
+        // Pública pro middleware do NextAuth -- a própria rota exige
+        // Authorization: Bearer $METRICS_TOKEN e retorna 401 sem ele (não
+        // depende de sessão de usuário, é scrape do Prometheus). Ver
+        // src/app/api/metrics/route.ts e .specs/features/observability-metrics.
+        nextUrl.pathname === '/api/metrics' ||
         nextUrl.pathname === '/privacidade' ||
         nextUrl.pathname === '/termos' ||
         nextUrl.pathname.startsWith('/_next') ||

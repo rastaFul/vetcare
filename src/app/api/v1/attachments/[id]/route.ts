@@ -6,11 +6,13 @@ import { LocalStorageAdapter } from '@/modules/documents/infrastructure/storage/
 import { GetAttachment } from '@/modules/documents/application/use-cases/GetAttachment'
 import { DeleteAttachment } from '@/modules/documents/application/use-cases/DeleteAttachment'
 import { Attachment } from '@/modules/documents/domain/entities/Attachment'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const attachmentRepo = new PrismaAttachmentRepository()
 const storage = new LocalStorageAdapter()
 
-export async function GET(
+async function GET_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -24,8 +26,10 @@ export async function GET(
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/attachments/:id", GET_impl)
 
-export async function DELETE(
+
+async function DELETE_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -39,6 +43,8 @@ export async function DELETE(
     return apiError(e)
   }
 }
+export const DELETE = withMetrics("/api/v1/attachments/:id", DELETE_impl)
+
 
 function attachmentToDTO(attachment: Attachment) {
   return {

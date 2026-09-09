@@ -3,10 +3,12 @@ import { apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaAntiFleasRepository } from '@/modules/preventive/infrastructure/repositories/PrismaAntiFleasRepository'
 import { NotFoundError } from '@/shared/infrastructure/errors'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const antiFleasRepo = new PrismaAntiFleasRepository()
 
-export async function DELETE(
+async function DELETE_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; recordId: string }> }
 ) {
@@ -21,3 +23,5 @@ export async function DELETE(
     return apiError(e)
   }
 }
+export const DELETE = withMetrics("/api/v1/animals/:id/antifleas/:recordId", DELETE_impl)
+

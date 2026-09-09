@@ -7,13 +7,15 @@ import { prisma } from '@/lib/prisma'
 import { ValidationError } from '@/shared/infrastructure/errors'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const animalRepo = new PrismaAnimalRepository()
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -58,3 +60,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/animals/:id/photo", POST_impl)
+

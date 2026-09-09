@@ -7,10 +7,12 @@ import { UpdateClient } from '@/modules/clients/application/use-cases/UpdateClie
 import { UpdateClientSchema } from '@/modules/clients/application/dtos/ClientDTO'
 import { Client } from '@/modules/clients/domain/entities/Client'
 import { NotFoundError } from '@/shared/infrastructure/errors'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaClientRepository()
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_impl(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -23,8 +25,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/clients/:id", GET_impl)
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+async function PUT_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -39,8 +43,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/clients/:id", PUT_impl)
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+async function PATCH_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -58,6 +64,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return apiError(e)
   }
 }
+export const PATCH = withMetrics("/api/v1/clients/:id", PATCH_impl)
+
 
 function clientToDTO(client: Client) {
   return {

@@ -7,11 +7,13 @@ import { RegisterAnimal } from '@/modules/patients/application/use-cases/Registe
 import { ListAnimals } from '@/modules/patients/application/use-cases/ListAnimals'
 import { CreateAnimalSchema } from '@/modules/patients/application/dtos/AnimalDTO'
 import { Animal } from '@/modules/patients/domain/entities/Animal'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const animalRepo = new PrismaAnimalRepository()
 const tutorRepo = new PrismaTutorRepository()
 
-export async function GET(req: NextRequest) {
+async function GET_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const { searchParams } = new URL(req.url)
@@ -36,8 +38,10 @@ export async function GET(req: NextRequest) {
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/animals", GET_impl)
 
-export async function POST(req: NextRequest) {
+
+async function POST_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const body = await req.json()
@@ -51,6 +55,8 @@ export async function POST(req: NextRequest) {
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/animals", POST_impl)
+
 
 function animalToDTO(animal: Animal) {
   return {

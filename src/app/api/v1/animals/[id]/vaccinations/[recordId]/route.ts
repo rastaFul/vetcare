@@ -3,10 +3,12 @@ import { apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaVaccinationRepository } from '@/modules/preventive/infrastructure/repositories/PrismaVaccinationRepository'
 import { NotFoundError } from '@/shared/infrastructure/errors'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const vaccinationRepo = new PrismaVaccinationRepository()
 
-export async function DELETE(
+async function DELETE_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; recordId: string }> }
 ) {
@@ -21,3 +23,5 @@ export async function DELETE(
     return apiError(e)
   }
 }
+export const DELETE = withMetrics("/api/v1/animals/:id/vaccinations/:recordId", DELETE_impl)
+

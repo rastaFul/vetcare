@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { withMetrics } from '@/lib/with-metrics'
 
-export async function GET() {
+
+async function GET_impl() {
   return NextResponse.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -8,3 +10,5 @@ export async function GET() {
     service: 'vetcare-api',
   })
 }
+export const GET = withMetrics("/api/health", GET_impl)
+

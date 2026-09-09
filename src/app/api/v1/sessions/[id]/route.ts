@@ -7,6 +7,8 @@ import { RescheduleSession } from '@/modules/scheduling/application/use-cases/Re
 import { prisma } from '@/lib/prisma'
 import { Session } from '@/modules/scheduling/domain/entities/Session'
 import { z } from 'zod'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const sessionRepo = new PrismaSessionRepository()
 
@@ -24,7 +26,7 @@ const UpdateSessionSchema = z.object({
   returnDate: z.string().datetime().optional().nullable(),
 })
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_impl(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authSession = await getAuthSession()
     const { id } = await params
@@ -43,8 +45,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/sessions/:id", GET_impl)
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+async function PUT_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authSession = await getAuthSession()
     const { id } = await params
@@ -80,6 +84,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/sessions/:id", PUT_impl)
+
 
 function sessionToDTO(s: Session) {
   return {

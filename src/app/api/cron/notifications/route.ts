@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withMetrics } from '@/lib/with-metrics'
 
-export async function GET(req: NextRequest) {
+
+async function GET_impl(req: NextRequest) {
   const secret = new URL(req.url).searchParams.get('secret')
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -14,3 +16,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 })
   }
 }
+export const GET = withMetrics("/api/cron/notifications", GET_impl)
+

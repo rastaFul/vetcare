@@ -6,10 +6,12 @@ import { RegisterClient } from '@/modules/clients/application/use-cases/Register
 import { ListClients } from '@/modules/clients/application/use-cases/ListClients'
 import { CreateClientSchema } from '@/modules/clients/application/dtos/ClientDTO'
 import { Client } from '@/modules/clients/domain/entities/Client'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaClientRepository()
 
-export async function GET(req: NextRequest) {
+async function GET_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const { searchParams } = new URL(req.url)
@@ -32,8 +34,10 @@ export async function GET(req: NextRequest) {
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/clients", GET_impl)
 
-export async function POST(req: NextRequest) {
+
+async function POST_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const body = await req.json()
@@ -47,6 +51,8 @@ export async function POST(req: NextRequest) {
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/clients", POST_impl)
+
 
 function clientToDTO(client: Client) {
   return {

@@ -6,10 +6,12 @@ import { CreateService } from '@/modules/services/application/use-cases/CreateSe
 import { ListServices } from '@/modules/services/application/use-cases/ListServices'
 import { CreateServiceSchema } from '@/modules/services/application/dtos/ServiceDTO'
 import { Service } from '@/modules/services/domain/entities/Service'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaServiceRepository()
 
-export async function GET(req: NextRequest) {
+async function GET_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const { searchParams } = new URL(req.url)
@@ -27,8 +29,10 @@ export async function GET(req: NextRequest) {
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/services", GET_impl)
 
-export async function POST(req: NextRequest) {
+
+async function POST_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const body = await req.json()
@@ -42,6 +46,8 @@ export async function POST(req: NextRequest) {
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/services", POST_impl)
+
 
 function serviceToDTO(s: Service) {
   return {

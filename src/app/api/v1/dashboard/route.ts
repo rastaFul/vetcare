@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
+import { withMetrics } from '@/lib/with-metrics'
 
-export async function GET() {
+
+async function GET_impl() {
   try {
     const session = await getAuthSession()
     const { tenantId } = session
@@ -102,3 +104,5 @@ export async function GET() {
     )
   }
 }
+export const GET = withMetrics("/api/v1/dashboard", GET_impl)
+

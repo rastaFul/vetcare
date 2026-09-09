@@ -1,5 +1,11 @@
 version: '3.9'
 
+# restart: always everywhere in this file (not unless-stopped, changed
+# 2026-09-09) -- see infra-platform .specs/audit/execution.md (2026-09-09):
+# `unless-stopped` doesn't resurrect a container that crashed and was already
+# Exited before a later Docker Desktop stop/start cycle (local dev machine,
+# user stops/starts Docker Desktop itself); `always` does.
+
 networks:
   # Named explicitly 2026-08-29 -- was relying on Compose's implicit
   # "vetcare_default" name, the only one of the 4 products not following
@@ -18,7 +24,7 @@ networks:
 services:
   postgres:
     image: postgres:16-alpine
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:5432:5432"
     environment:
@@ -35,7 +41,7 @@ services:
 
   postgres_test:
     image: postgres:16-alpine
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:5433:5432"
     environment:
@@ -64,7 +70,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
+    restart: always
 
   # Added 2026-08-29 (features/observability-promtail-docker/spec.md in
   # infra-platform). vetcare never had log shipping to Loki before --
@@ -80,7 +86,7 @@ services:
       - ./promtail/config.yml:/etc/promtail/config.yml:ro
       - promtail_positions:/tmp/promtail
     command: -config.file=/etc/promtail/config.yml
-    restart: unless-stopped
+    restart: always
 
 volumes:
   postgres_dev_data:

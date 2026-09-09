@@ -7,11 +7,13 @@ import { CreatePrescription } from '@/modules/prescriptions/application/use-case
 import { ListPrescriptions } from '@/modules/prescriptions/application/use-cases/ListPrescriptions'
 import { CreatePrescriptionSchema } from '@/modules/prescriptions/application/dtos/PrescriptionDTO'
 import { Prescription } from '@/modules/prescriptions/domain/entities/Prescription'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const prescriptionRepo = new PrismaPrescriptionRepository()
 const consultationRepo = new PrismaConsultationRepository()
 
-export async function GET(
+async function GET_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,8 +27,10 @@ export async function GET(
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/consultations/:id/prescriptions", GET_impl)
 
-export async function POST(
+
+async function POST_impl(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -42,6 +46,8 @@ export async function POST(
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/consultations/:id/prescriptions", POST_impl)
+
 
 function prescriptionToDTO(prescription: Prescription) {
   return {

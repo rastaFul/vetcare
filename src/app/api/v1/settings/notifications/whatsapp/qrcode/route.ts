@@ -3,8 +3,10 @@ import { apiSuccess, apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
 import { EvolutionApiAdapter } from '@/modules/notifications/infrastructure/whatsapp/EvolutionApiAdapter'
+import { withMetrics } from '@/lib/with-metrics'
 
-export async function GET() {
+
+async function GET_impl() {
   try {
     const session = await getAuthSession()
 
@@ -52,3 +54,5 @@ export async function GET() {
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/settings/notifications/whatsapp/qrcode", GET_impl)
+

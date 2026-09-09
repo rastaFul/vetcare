@@ -9,12 +9,14 @@ import { ListAttachments } from '@/modules/documents/application/use-cases/ListA
 import { UploadAttachmentSchema } from '@/modules/documents/application/dtos/AttachmentDTO'
 import { ValidationError } from '@/shared/infrastructure/errors'
 import { Attachment } from '@/modules/documents/domain/entities/Attachment'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const attachmentRepo = new PrismaAttachmentRepository()
 const animalRepo = new PrismaAnimalRepository()
 const storage = new LocalStorageAdapter()
 
-export async function GET(
+async function GET_impl(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -35,8 +37,10 @@ export async function GET(
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/animals/:id/attachments", GET_impl)
 
-export async function POST(
+
+async function POST_impl(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -68,6 +72,8 @@ export async function POST(
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/animals/:id/attachments", POST_impl)
+
 
 function attachmentToDTO(attachment: Attachment) {
   return {

@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { apiSuccess, apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const UpdateNotificationSettingsSchema = z.object({
   evolutionApiUrl: z.string().optional(),
@@ -12,7 +14,7 @@ const UpdateNotificationSettingsSchema = z.object({
   resendFromEmail: z.string().optional(),
 })
 
-export async function GET() {
+async function GET_impl() {
   try {
     const session = await getAuthSession()
 
@@ -38,8 +40,10 @@ export async function GET() {
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/settings/notifications", GET_impl)
 
-export async function PUT(req: NextRequest) {
+
+async function PUT_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const body = await req.json()
@@ -55,3 +59,5 @@ export async function PUT(req: NextRequest) {
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/settings/notifications", PUT_impl)
+

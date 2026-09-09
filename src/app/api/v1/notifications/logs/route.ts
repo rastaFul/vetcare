@@ -2,8 +2,10 @@ import { NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
+import { withMetrics } from '@/lib/with-metrics'
 
-export async function GET(req: NextRequest) {
+
+async function GET_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const { searchParams } = new URL(req.url)
@@ -38,3 +40,5 @@ export async function GET(req: NextRequest) {
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/notifications/logs", GET_impl)
+

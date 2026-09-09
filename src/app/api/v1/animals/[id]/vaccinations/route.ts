@@ -7,11 +7,13 @@ import { ApplyVaccination } from '@/modules/preventive/application/use-cases/App
 import { ListVaccinations } from '@/modules/preventive/application/use-cases/ListVaccinations'
 import { ApplyVaccinationSchema } from '@/modules/preventive/application/dtos/PreventiveDTO'
 import { VaccinationRecord } from '@/modules/preventive/domain/entities/VaccinationRecord'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const vaccinationRepo = new PrismaVaccinationRepository()
 const animalRepo = new PrismaAnimalRepository()
 
-export async function GET(
+async function GET_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,8 +27,10 @@ export async function GET(
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/animals/:id/vaccinations", GET_impl)
 
-export async function POST(
+
+async function POST_impl(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -42,6 +46,8 @@ export async function POST(
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/animals/:id/vaccinations", POST_impl)
+
 
 function vaccinationToDTO(record: VaccinationRecord) {
   return {

@@ -2,8 +2,10 @@ import { apiSuccess, apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
 import { GoogleCalendarServiceAccountAdapter } from '@/modules/clinical/infrastructure/calendar/GoogleCalendarServiceAccountAdapter'
+import { withMetrics } from '@/lib/with-metrics'
 
-export async function POST() {
+
+async function POST_impl() {
   try {
     const session = await getAuthSession()
 
@@ -37,3 +39,5 @@ export async function POST() {
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/settings/calendar/setup", POST_impl)
+

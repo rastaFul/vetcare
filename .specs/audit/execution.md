@@ -316,3 +316,96 @@ Iniciado: 2026-06-04T14:32:18-03:00
 - npm test: PASS (230/230, 47 suites)
 - pm2 restart vetcare: PASS (Ready in 1134ms)
 - Status: DONE
+
+## Task: /api/metrics (observability-metrics spec T1/T2) — 2026-09-09
+- `npm install prom-client@^15.1.3`: OK.
+- `src/lib/metrics.ts` (Registry + collectDefaultMetrics prefix vetcare_), `src/app/api/metrics/route.ts` (Bearer auth), `src/lib/auth.config.ts` (bypass NextAuth pra /api/metrics, mesmo padrão de /api/health).
+- `METRICS_TOKEN` adicionado a `.env` (valor = infra-platform/platform/prometheus/metrics_token) e `.env.example` (placeholder).
+- Teste novo: `src/app/api/metrics/__tests__/metrics.test.ts` (4 casos: sem header, token errado, token certo, token não configurado).
+- Gates:
+  - `npx jest src/app/api/metrics`: PASS (4/4)
+  - `npx tsc --noEmit`: PASS (0 erros)
+  - `npx eslint` nos 4 arquivos tocados: PASS (0 problemas)
+  - `docker compose -f docker-compose.dev.yml config --quiet`: PASS
+  - `docker compose -f docker-compose.dev.yml up -d --build app`: PASS, container `healthy`
+- Verificação externa real (não self-validada):
+  - `curl http://127.0.0.1:3004/api/metrics` sem header → 401
+  - idem com `Authorization: Bearer wrong` → 401
+  - idem com token correto → 200, `# HELP vetcare_process_cpu_user_seconds_total ...` (formato Prometheus real)
+- Status: DONE (T1 parcial por escopo documentado — sem http_requests_total custom ainda; T2 completo; T3 é do lado infra-platform, ver o audit de lá)
+
+## Task: restart:always + investigação de métricas HTTP custom + Vault push — 2026-09-09
+- `docker-compose.dev.yml`: `restart: unless-stopped` → `restart: always` nos 4 serviços (postgres,
+  postgres_test, app, promtail) — pedido do usuário (para o Docker Desktop pra jogar, espera tudo
+  de volta sozinho). `docker compose config --quiet` PASS, aplicado ao vivo via `docker compose up
+  -d` (4 contêineres recriados, todos `Up`/saudáveis depois).
+- **Investigado e deliberadamente NÃO implementado** (`http_requests_total`/`http_request_duration`
+  por rota, análogo ao dos outros 3 produtos): cheguei a implementar via `src/middleware.ts`
+  (`runtime: 'nodejs'`, wrap do `auth()` do NextAuth) e reverti depois de constatar 2 problemas
+  reais, não hipotéticos:
+  1. Next.js App Router roda o middleware ANTES do route handler — não tem como observar o status
+     HTTP final nem a duração real do request a partir dali (a resposta ainda não existe).
+  2. Ao tentar contornar (medir só a decisão do middleware de auth: 200 passou / redirect pro
+     login), esbarrei num problema de tipagem real do NextAuth v5: chamar `auth(req)` diretamente
+     (fora do padrão `export default auth` ou `auth(handler)`) resolve pro overload de
+     "pegar sessão", não pro de "agir como middleware" — não dá pra inspecionar a resposta de fora
+     sem reimplementar a lógica de autorização.
+  - Mesmo se o problema de tipagem fosse contornado, o dado resultante seria enganoso: um
+    `status_code` sempre "200/passou" (nunca o status real da rota) e uma `duration` medindo só o
+    tempo do check de auth (não o request inteiro) pareceriam métricas reais num dashboard que
+    filtra por `status_code=~"5.."` pra taxa de erro — pior que não ter o dado.
+  - Implementação correta exige um wrapper em cada um dos ~50 `route.ts` (acesso à `NextResponse`
+    real) — fora do escopo desta correção pontual. Revertido pra estado limpo (`src/middleware.ts`
+    e `src/lib/metrics.ts` sem as métricas HTTP, só `collectDefaultMetrics`), `tsc`/`jest`/`eslint`
+    re-confirmados limpos depois da reversão.
+  - **Achado colateral real, registrado, não corrigido** (precisa decisão do usuário, é rename de
+    métrica com histórico em produção): `rastafinancas-api` usa `rasta_http_requests_total`/
+    `rasta_http_request_duration_seconds` (prefixado, segundos) enquanto o dashboard "Golden
+    Signals" do infra-platform e `artists-api`/`microgrow-api` usam `http_requests_total`/
+    `http_request_duration_ms` (sem prefixo, ms). Confirmado ao vivo via Prometheus:
+    `http_requests_total{service="rastafinancas-api"}` não existe. Os painéis de
+    request-rate/error-rate/latência desse dashboard nunca mostraram dado real pra rastafinancas.
+    Ver `infra-platform/.specs/audit/execution.md` (2026-09-09).
+- `vault-push-env.sh vetcare .env` rodado (Vault precisou ser deselado antes, `platform-vault` tinha
+  sido recriado na mesma sessão pela mudança de restart policy) — 20 chaves confirmadas em
+  `secret/data/vetcare/env`, `METRICS_TOKEN` verificado byte-a-byte igual ao `.env` real.
+- Status: DONE (T2 fechado como "investigado, não implementado, com follow-up registrado" — decisão
+  deliberada de não entregar dado enganoso; T3/pendência de Vault fechada)
+
+## Task: instrumentação HTTP real via wrapper por route handler — 2026-09-09 (continuação)
+Usuário pediu pra resolver o follow-up registrado na task anterior (instrumentar de verdade, não
+via middleware).
+- `src/lib/with-metrics.ts` criado: `withMetrics(route, handler)`, mede `process.hrtime.bigint()`
+  e lê `res.status` real — só funciona dentro do route handler (motivo: ver task anterior).
+- `src/lib/metrics.ts`: `collectDefaultMetrics` sem prefixo (era `vetcare_`) + `http_requests_total`
+  (Counter) + `http_request_duration_ms` (Histogram, buckets `[5,10,25,50,100,250,500,1000,2500,5000]`,
+  iguais ao microgrow-api) — nomes sem prefixo, alinhado com artists-api/microgrow-api/
+  rastafinancas-api (ver `infra-platform` D-2026-09-09-3).
+- `scripts/wrap-routes-with-metrics.mjs`: codemod com TypeScript compiler API (AST) — acha cada
+  `export async function METODO(...)` top-level em `src/app/api/**/route.ts`, renomeia pra
+  `METODO_impl`, insere `export const METODO = withMetrics(rota, METODO_impl)` logo depois.
+  Reescrita por slice de texto (não pelo printer do TS) — preserva 100% do corpo original
+  (comentários, formatação, helpers não-exportados intocados). Rota calculada do path do arquivo,
+  `[id]` → `:id`.
+  - `--dry-run` primeiro: 72 handlers em 48 arquivos, 2 pulados de propósito (`/api/metrics` —
+    não faz sentido medir a si mesmo; `/api/auth/[...nextauth]` — re-export de `handlers` do
+    NextAuth, nem casa o padrão do codemod, confirmado visualmente antes de rodar).
+  - Rodado de verdade depois de revisar o dry-run.
+- Gates:
+  - `tsc --noEmit`: limpo nos 48 arquivos tocados (funções com assinaturas variadas — sem params,
+    com `{ params }` de rota dinâmica — todas type-check OK contra `withMetrics<Ctx>`)
+  - `eslint` (src/app/api + src/lib/with-metrics.ts + src/lib/metrics.ts + o script): limpo
+  - `jest`: 234/234 PASS (233 pré-existentes intocados + 1 do próprio `/api/metrics` corrigido —
+    esperava o prefixo `vetcare_` antigo no body, atualizado pra `http_requests_total`/
+    `process_cpu_user_seconds_total`)
+  - `npm run build` (Next.js, produção real): PASS, todas as ~50 rotas compiladas sem erro
+  - `docker compose -f docker-compose.dev.yml up -d --build app`: PASS, `healthy`
+- Verificação externa real (não self-validada):
+  - `curl /api/health` real → `http_requests_total{method="GET",route="/api/health",status_code="200"}`
+    incrementado de fato (confirmado lendo `/api/metrics` antes/depois)
+  - `curl /api/v1/animals` (sem sessão) → NÃO incrementou nenhuma métrica — comportamento correto
+    e esperado: o NextAuth middleware barra antes do handler rodar, o wrapper só mede o que
+    realmente chega no handler (by design, não é uma lacuna)
+  - Prometheus (`infra-platform`): `GET /api/v1/series?match[]=http_requests_total{service="vetcare"}`
+    confirma dado real chegando via scrape
+- Status: DONE. T1 da spec `observability-metrics` fechado por completo agora.

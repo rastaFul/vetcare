@@ -10,6 +10,8 @@ import { CompleteConsultationSchema } from '@/modules/clinical/application/dtos/
 import { ValidationError } from '@/shared/infrastructure/errors'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const consultationRepo = new PrismaConsultationRepository()
 const calendarService = new GoogleCalendarServiceAccountAdapter()
@@ -20,7 +22,7 @@ const StatusPatchSchema = z.discriminatedUnion('status', [
   CompleteConsultationSchema.extend({ status: z.literal('COMPLETED') }),
 ])
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCH_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -64,3 +66,5 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return apiError(e)
   }
 }
+export const PATCH = withMetrics("/api/v1/consultations/:id/status", PATCH_impl)
+

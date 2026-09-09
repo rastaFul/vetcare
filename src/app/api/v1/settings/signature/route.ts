@@ -4,8 +4,10 @@ import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
+import { withMetrics } from '@/lib/with-metrics'
 
-export async function POST(req: NextRequest) {
+
+async function POST_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const formData = await req.formData()
@@ -33,3 +35,5 @@ export async function POST(req: NextRequest) {
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/settings/signature", POST_impl)
+

@@ -3,10 +3,12 @@ import { apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaPrescriptionRepository } from '@/modules/prescriptions/infrastructure/repositories/PrismaPrescriptionRepository'
 import { GetPrescription } from '@/modules/prescriptions/application/use-cases/GetPrescription'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const prescriptionRepo = new PrismaPrescriptionRepository()
 
-export async function GET(
+async function GET_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,3 +27,5 @@ export async function GET(
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/prescriptions/:id/pdf", GET_impl)
+

@@ -4,6 +4,8 @@ import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaClientRepository } from '@/modules/clients/infrastructure/repositories/PrismaClientRepository'
 import { UpdateClientHealthRecord } from '@/modules/clients/application/use-cases/UpdateClientHealthRecord'
 import { z } from 'zod'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaClientRepository()
 
@@ -16,7 +18,7 @@ const HealthRecordSchema = z.object({
   observations: z.string().optional(),
 })
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_impl(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -27,8 +29,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/clients/:id/health-record", GET_impl)
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+async function PUT_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -57,3 +61,5 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/clients/:id/health-record", PUT_impl)
+

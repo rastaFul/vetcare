@@ -7,11 +7,13 @@ import { ApplyDeworming } from '@/modules/preventive/application/use-cases/Apply
 import { ListDewormings } from '@/modules/preventive/application/use-cases/ListDewormings'
 import { ApplyDewormingSchema } from '@/modules/preventive/application/dtos/PreventiveDTO'
 import { DewormingRecord } from '@/modules/preventive/domain/entities/DewormingRecord'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const dewormingRepo = new PrismaDewormingRepository()
 const animalRepo = new PrismaAnimalRepository()
 
-export async function GET(
+async function GET_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,8 +27,10 @@ export async function GET(
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/animals/:id/dewormings", GET_impl)
 
-export async function POST(
+
+async function POST_impl(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -42,6 +46,8 @@ export async function POST(
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/animals/:id/dewormings", POST_impl)
+
 
 function dewormingToDTO(record: DewormingRecord) {
   return {

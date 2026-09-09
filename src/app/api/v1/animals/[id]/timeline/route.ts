@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
 import { NotFoundError } from '@/shared/infrastructure/errors'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 interface TimelineEntry {
   id: string
@@ -14,7 +16,7 @@ interface TimelineEntry {
   metadata?: Record<string, unknown>
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id: animalId } = await params
@@ -175,3 +177,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/animals/:id/timeline", GET_impl)
+

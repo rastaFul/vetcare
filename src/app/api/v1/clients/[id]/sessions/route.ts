@@ -4,10 +4,12 @@ import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaSessionRepository } from '@/modules/scheduling/infrastructure/repositories/PrismaSessionRepository'
 import { ListSessions } from '@/modules/scheduling/application/use-cases/ListSessions'
 import { Session } from '@/modules/scheduling/domain/entities/Session'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaSessionRepository()
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -30,6 +32,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/clients/:id/sessions", GET_impl)
+
 
 function sessionToDTO(s: Session) {
   return {

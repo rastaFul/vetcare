@@ -8,6 +8,8 @@ import { PrismaNotificationLogRepository } from '@/modules/notifications/infrast
 import { EvolutionApiAdapter } from '@/modules/notifications/infrastructure/whatsapp/EvolutionApiAdapter'
 import { ResendAdapter } from '@/modules/notifications/infrastructure/email/ResendAdapter'
 import { INotificationService } from '@/modules/notifications/application/ports/INotificationService'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const SendNotificationSchema = z.object({
   tutorId: z.string(),
@@ -23,7 +25,7 @@ const SendNotificationSchema = z.object({
   channel: z.enum(['WHATSAPP', 'EMAIL']).optional(),
 })
 
-export async function POST(req: NextRequest) {
+async function POST_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const body = await req.json()
@@ -64,3 +66,5 @@ export async function POST(req: NextRequest) {
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/notifications/send", POST_impl)
+

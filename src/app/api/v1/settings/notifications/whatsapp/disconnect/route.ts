@@ -1,8 +1,10 @@
 import { apiSuccess, apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
+import { withMetrics } from '@/lib/with-metrics'
 
-export async function DELETE() {
+
+async function DELETE_impl() {
   try {
     const session = await getAuthSession()
 
@@ -31,3 +33,5 @@ export async function DELETE() {
     return apiError(e)
   }
 }
+export const DELETE = withMetrics("/api/v1/settings/notifications/whatsapp/disconnect", DELETE_impl)
+

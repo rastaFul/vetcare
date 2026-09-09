@@ -9,12 +9,14 @@ import { ListConsultations } from '@/modules/clinical/application/use-cases/List
 import { ScheduleConsultationSchema } from '@/modules/clinical/application/dtos/ConsultationDTO'
 import { Consultation } from '@/modules/clinical/domain/entities/Consultation'
 import { prisma } from '@/lib/prisma'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const consultationRepo = new PrismaConsultationRepository()
 const animalRepo = new PrismaAnimalRepository()
 const calendarService = new GoogleCalendarServiceAccountAdapter()
 
-export async function GET(req: NextRequest) {
+async function GET_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const { searchParams } = new URL(req.url)
@@ -40,8 +42,10 @@ export async function GET(req: NextRequest) {
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/consultations", GET_impl)
 
-export async function POST(req: NextRequest) {
+
+async function POST_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const body = await req.json()
@@ -67,6 +71,8 @@ export async function POST(req: NextRequest) {
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/consultations", POST_impl)
+
 
 function consultationToDTO(consultation: Consultation) {
   return {

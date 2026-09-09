@@ -9,10 +9,12 @@ import { UpdateAnimalSchema } from '@/modules/patients/application/dtos/AnimalDT
 import { Animal, AnimalStatus } from '@/modules/patients/domain/entities/Animal'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const animalRepo = new PrismaAnimalRepository()
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -34,8 +36,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/animals/:id", GET_impl)
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+async function PUT_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -53,12 +57,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/animals/:id", PUT_impl)
+
 
 const StatusSchema = z.object({
   status: z.enum(['ACTIVE', 'DECEASED', 'INACTIVE']),
 })
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCH_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -76,6 +82,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return apiError(e)
   }
 }
+export const PATCH = withMetrics("/api/v1/animals/:id", PATCH_impl)
+
 
 function animalToDTO(animal: Animal) {
   return {

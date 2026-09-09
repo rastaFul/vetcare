@@ -4,11 +4,13 @@ import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaAttachmentRepository } from '@/modules/documents/infrastructure/repositories/PrismaAttachmentRepository'
 import { LocalStorageAdapter } from '@/modules/documents/infrastructure/storage/LocalStorageAdapter'
 import { GetAttachment } from '@/modules/documents/application/use-cases/GetAttachment'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const attachmentRepo = new PrismaAttachmentRepository()
 const storage = new LocalStorageAdapter()
 
-export async function GET(
+async function GET_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -22,3 +24,5 @@ export async function GET(
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/attachments/:id/download", GET_impl)
+

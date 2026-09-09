@@ -7,11 +7,13 @@ import { ApplyAntiFleas } from '@/modules/preventive/application/use-cases/Apply
 import { ListAntiFleas } from '@/modules/preventive/application/use-cases/ListAntiFleas'
 import { ApplyAntiFleasSchema } from '@/modules/preventive/application/dtos/PreventiveDTO'
 import { AntiFleasRecord } from '@/modules/preventive/domain/entities/AntiFleasRecord'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const antiFleasRepo = new PrismaAntiFleasRepository()
 const animalRepo = new PrismaAnimalRepository()
 
-export async function GET(
+async function GET_impl(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,8 +27,10 @@ export async function GET(
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/animals/:id/antifleas", GET_impl)
 
-export async function POST(
+
+async function POST_impl(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -42,6 +46,8 @@ export async function POST(
     return apiError(e)
   }
 }
+export const POST = withMetrics("/api/v1/animals/:id/antifleas", POST_impl)
+
 
 function antiFleasToDTO(record: AntiFleasRecord) {
   return {

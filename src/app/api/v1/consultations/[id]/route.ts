@@ -8,11 +8,13 @@ import { RescheduleConsultation } from '@/modules/clinical/application/use-cases
 import { UpdateConsultationSchema } from '@/modules/clinical/application/dtos/ConsultationDTO'
 import { Consultation } from '@/modules/clinical/domain/entities/Consultation'
 import { prisma } from '@/lib/prisma'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const consultationRepo = new PrismaConsultationRepository()
 const calendarService = new GoogleCalendarServiceAccountAdapter()
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -57,8 +59,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/consultations/:id", GET_impl)
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+async function PUT_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -82,6 +86,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/consultations/:id", PUT_impl)
+
 
 function consultationToDTO(consultation: Consultation) {
   return {

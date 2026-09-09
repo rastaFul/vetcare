@@ -8,10 +8,12 @@ import { DeactivateTutor } from '@/modules/patients/application/use-cases/Deacti
 import { UpdateTutorSchema } from '@/modules/patients/application/dtos/TutorDTO'
 import { Tutor } from '@/modules/patients/domain/entities/Tutor'
 import { prisma } from '@/lib/prisma'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaTutorRepository()
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -40,8 +42,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/tutors/:id", GET_impl)
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+async function PUT_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -59,8 +63,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/tutors/:id", PUT_impl)
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+
+async function PATCH_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -79,6 +85,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return apiError(e)
   }
 }
+export const PATCH = withMetrics("/api/v1/tutors/:id", PATCH_impl)
+
 
 function tutorToDTO(tutor: Tutor) {
   return {

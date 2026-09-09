@@ -3,6 +3,8 @@ import { apiSuccess, apiError } from '@/shared/infrastructure/api-response'
 import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const UpdateProfileSchema = z.object({
   name: z.string().min(2).optional(),
@@ -10,7 +12,7 @@ const UpdateProfileSchema = z.object({
   specialty: z.string().optional(),
 })
 
-export async function GET() {
+async function GET_impl() {
   try {
     const session = await getAuthSession()
     const user = await prisma.user.findUnique({
@@ -23,8 +25,10 @@ export async function GET() {
     return apiError(e)
   }
 }
+export const GET = withMetrics("/api/v1/settings/profile", GET_impl)
 
-export async function PUT(req: NextRequest) {
+
+async function PUT_impl(req: NextRequest) {
   try {
     const session = await getAuthSession()
     const body = await req.json()
@@ -39,3 +43,5 @@ export async function PUT(req: NextRequest) {
     return apiError(e)
   }
 }
+export const PUT = withMetrics("/api/v1/settings/profile", PUT_impl)
+

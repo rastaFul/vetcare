@@ -6,10 +6,12 @@ import { ConfirmSession } from '@/modules/scheduling/application/use-cases/Confi
 import { CompleteSession } from '@/modules/scheduling/application/use-cases/CompleteSession'
 import { CancelSession } from '@/modules/scheduling/application/use-cases/CancelSession'
 import { Session } from '@/modules/scheduling/domain/entities/Session'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaSessionRepository()
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCH_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authSession = await getAuthSession()
     const { id } = await params
@@ -53,3 +55,5 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return apiError(e)
   }
 }
+export const PATCH = withMetrics("/api/v1/sessions/:id/status", PATCH_impl)
+

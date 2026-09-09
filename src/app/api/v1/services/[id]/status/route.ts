@@ -4,10 +4,12 @@ import { getAuthSession } from '@/shared/infrastructure/get-session'
 import { PrismaServiceRepository } from '@/modules/services/infrastructure/repositories/PrismaServiceRepository'
 import { NotFoundError } from '@/shared/infrastructure/errors'
 import { Service } from '@/modules/services/domain/entities/Service'
+import { withMetrics } from '@/lib/with-metrics'
+
 
 const repo = new PrismaServiceRepository()
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCH_impl(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getAuthSession()
     const { id } = await params
@@ -25,6 +27,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return apiError(e)
   }
 }
+export const PATCH = withMetrics("/api/v1/services/:id/status", PATCH_impl)
+
 
 function serviceToDTO(s: Service) {
   return {
