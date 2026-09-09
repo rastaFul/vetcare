@@ -56,3 +56,6 @@
 - **Contexto**: Necessidade de autenticação segura, suporte a Google OAuth e credenciais
 - **Decisão**: NextAuth.js v5 com adapter Prisma
 - **Consequências**: Sessões gerenciadas; fácil adição de providers futuros; RBAC extensível
+
+## 2026-09-08 — Harness Gates Rollout installed (full, incl. husky/commitlint)
+See STATE.md same date. Commit messages in this repo must now follow Conventional Commits (commitlint via pre-commit hook).

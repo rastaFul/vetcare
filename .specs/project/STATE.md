@@ -77,3 +77,6 @@
 - Cron: interno via instrumentation.ts + /api/cron/notifications ✅
 - Email: noreply@rastaful.dev ✅
 - professionType muda o menu mas exige re-login para atualizar token JWT ✅
+
+## Harness Gates Rollout — 2026-09-08T22:33:21-03:00
+Status: DONE (full — including devDependency installs and husky activation). Installed via `agents-harness/claude/install.sh`: CLAUDE.md, `.claude/agents/`, `skills/`, `steering/`, `templates/dev-quality/`, `.harness-sandbox/docker/`, `.github/workflows/gates.yml`, `.github/CODEOWNERS`, dev-quality devDependency bundle + husky hooks active. `lint-staged` correctly installed at the now-pinned `@16` (git-2.32.0-floor bug found+fixed centrally during the rastafinancas rollout just before this one). Working tree was clean before this rollout. Verified: files present, `bash -n`/`yamllint` PASS, real `npm install` succeeded. See `.specs/features/harness-gates-rollout/spec.md`.
