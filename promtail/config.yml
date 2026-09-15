@@ -1,3 +1,11 @@
+# HISTORICAL -- superseded 2026-09-15 by config.alloy (Grafana Alloy v1.19.2,
+# infra-platform features/infra-full-upgrade-2026-09/spec.md, Lote 2).
+# Promtail is EOL since 03/2026; docker-compose.dev.yml no longer runs this
+# config. Kept only as a reference for the original docker_sd_configs
+# filters/relabels (including the self-scraping anchoring fix from
+# 2026-08-29) that config.alloy was converted from. Do not re-enable without
+# updating this comment. Rollback: `git checkout pre-infra-upgrade-2026-09 --
+# promtail/config.yml docker-compose.dev.yml`.
 server:
   http_listen_port: 9080
   grpc_listen_port: 0

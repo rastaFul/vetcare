@@ -23,7 +23,7 @@ networks:
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: always
     ports:
       - "127.0.0.1:5432:5432"
@@ -32,7 +32,12 @@ services:
       POSTGRES_USER: vetcare
       POSTGRES_PASSWORD: vetcare_secret
     volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
+      # New volume + parent-dir mount point (2026-09-15, infra-full-upgrade-
+      # 2026-09 Lote 9): same real bug hit and fixed on platform-glitchtip-db
+      # -- postgres 18+ images refuse a volume mounted directly at
+      # `.../data` on a fresh volume (docker-library/postgres#37/#1259).
+      # Old volume `postgres_dev_data` (pg16) kept as rollback, not deleted.
+      - postgres_dev_data_pg18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vetcare"]
       interval: 5s
@@ -40,7 +45,7 @@ services:
       retries: 10
 
   postgres_test:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: always
     ports:
       - "127.0.0.1:5433:5432"
@@ -73,21 +78,24 @@ services:
     restart: always
 
   # Added 2026-08-29 (features/observability-promtail-docker/spec.md in
-  # infra-platform). vetcare never had log shipping to Loki before --
-  # same docker_sd_configs pattern already proven in
-  # rastafinancas/microgrow's promtails.
-  promtail:
-    image: grafana/promtail:2.9.0
-    container_name: vetcare-promtail
+  # infra-platform), migrated from Promtail to Grafana Alloy 2026-09-15
+  # (features/infra-full-upgrade-2026-09/spec.md, Lote 2 -- Promtail EOL
+  # since 03/2026). Container renamed vetcare-promtail -> vetcare-alloy to
+  # reflect the new component; config.alloy converted from the old
+  # config.yml (kept in ./promtail/ as historical reference, unused).
+  alloy:
+    image: grafana/alloy:v1.19.2
+    container_name: vetcare-alloy
     networks:
       - platform_net
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./promtail/config.yml:/etc/promtail/config.yml:ro
-      - promtail_positions:/tmp/promtail
-    command: -config.file=/etc/promtail/config.yml
+      - ./promtail/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     restart: always
 
 volumes:
-  postgres_dev_data:
-  promtail_positions:
+  postgres_dev_data: # pg16, kept as rollback, unused after Lote 9
+  postgres_dev_data_pg18:
+  alloy_data:

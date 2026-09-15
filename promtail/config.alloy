@@ -1,0 +1,70 @@
+// Migrated from Promtail 2.9.0 to Grafana Alloy v1.19.2 on 2026-09-15
+// (infra-platform features/infra-full-upgrade-2026-09/spec.md, Lote 2 --
+// Promtail is EOL since 03/2026 across all 4 products). Converted via
+// `alloy convert --source-format=promtail` from the original config.yml
+// (kept as historical reference, no longer wired into docker-compose.dev.yml).
+//
+// Originally created 2026-08-29 (infra-platform features/observability-
+// promtail-docker/spec.md) -- vetcare never had log shipping to Loki before.
+// Same docker_sd pattern already proven in rastafinancas/microgrow.
+discovery.docker "vetcare_docker" {
+	host = "unix:///var/run/docker.sock"
+
+	filter {
+		name = "name"
+		// ^vetcare$ (anchored), not "vetcare" -- Docker's name filter does
+		// substring matching. Found this the hard way 2026-08-29: an
+		// unanchored "vetcare" also matched vetcare-postgres-1,
+		// vetcare-postgres_test-1, AND vetcare-promtail itself
+		// (self-scraping -- promtail shipping its own "shipping a batch"
+		// logs back to itself, a feedback loop that could balloon log
+		// volume over time). No output ever reached Loki while this was
+		// broken; every startup batch failed silently (truncated "final
+		// error sending batch" in promtail's own logs, root cause only
+		// found via a raw curl push test that proved connectivity was
+		// fine). MUST stay anchored after this migration too -- confirmed
+		// still anchored as of the Alloy conversion (2026-09-15).
+		values = ["^vetcare$"]
+	}
+}
+
+discovery.relabel "vetcare_docker" {
+	targets = []
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.+)"
+		target_label  = "container"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.+)"
+		target_label  = "service"
+	}
+
+	rule {
+		target_label = "app"
+		replacement  = "vetcare"
+	}
+}
+
+loki.source.docker "vetcare_docker" {
+	host          = "unix:///var/run/docker.sock"
+	targets       = discovery.docker.vetcare_docker.targets
+	forward_to    = [loki.process.vetcare_docker.receiver]
+	relabel_rules = discovery.relabel.vetcare_docker.rules
+}
+
+loki.process "vetcare_docker" {
+	forward_to = [loki.write.default.receiver]
+
+	stage.docker { }
+}
+
+loki.write "default" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+	external_labels = {}
+}

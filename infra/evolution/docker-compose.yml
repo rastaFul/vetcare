@@ -1,6 +1,16 @@
 services:
   evolution-api:
-    image: atendai/evolution-api:latest
+    # Achado real (2026-09-15, infra-full-upgrade-2026-09 Lote 11, D5):
+    # `atendai/evolution-api` não existe mais no Docker Hub (`pull access
+    # denied: repository does not exist` -- confirmado via pull real, não
+    # suposição). Projeto migrou pra Evolution Foundation, imagem oficial
+    # agora é `evoapicloud/evolution-api`. Pinado em v2.3.7 (última stable
+    # antes do v2.4.0, que introduz ativação obrigatória contra um servidor
+    # de licenciamento da Evolution Foundation -- mudança operacional grande
+    # demais pra decidir sozinho numa spec de bump de versão; ver dúvidas
+    # finais). Serviço estava dormant nesta sessão (não rodando antes),
+    # continua não religado.
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: evolution-api
     restart: unless-stopped
     ports:
@@ -39,7 +49,7 @@ services:
       retries: 5
 
   evolution-db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: evolution-db
     restart: unless-stopped
     environment:
@@ -47,7 +57,11 @@ services:
       POSTGRES_PASSWORD: evolution_secret
       POSTGRES_DB: evolution
     volumes:
-      - evolution_db:/var/lib/postgresql/data
+      # New volume + parent-dir mount point (2026-09-15, infra-full-upgrade-
+      # 2026-09 Lote 9) -- same postgres 18+ mount-point bug fixed on
+      # platform-glitchtip-db and vetcare's own `postgres` service. Old
+      # volume `evolution_db` (pg16) kept as rollback, not deleted.
+      - evolution_db_pg18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
       interval: 10s
@@ -56,4 +70,5 @@ services:
 
 volumes:
   evolution_instances:
-  evolution_db:
+  evolution_db: # pg16, kept as rollback, unused after Lote 9
+  evolution_db_pg18:
