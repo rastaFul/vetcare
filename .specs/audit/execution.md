@@ -409,3 +409,19 @@ via middleware).
   - Prometheus (`infra-platform`): `GET /api/v1/series?match[]=http_requests_total{service="vetcare"}`
     confirma dado real chegando via scrape
 - Status: DONE. T1 da spec `observability-metrics` fechado por completo agora.
+
+## Verificação — observability-metrics (harness-infra scan 2026-08-28) — 2026-09-15T23:12:27-03:00
+- Origem: harness-infra (infra-platform) delegou pedido de confirmação/execução da spec
+  `.specs/features/observability-metrics/spec.md` (achado 2026-08-28: vetcare era o único dos 4
+  produtos sem `/metrics`).
+- Verificação (read-only, sem mudança de código): STATE.md e spec.md deste repo confirmam
+  Status: DONE (fechada em 2026-09-09, 3 sessões de continuação).
+- Done criteria 1-3: todos [x] — `/api/metrics` com auth Bearer (401/401/200, jest 4/4),
+  `METRICS_TOKEN` em `.env` + Vault, job `vetcare` dedicado no Prometheus (`up`, dado real),
+  `http_requests_total`/`http_request_duration_ms` via `with-metrics.ts` + codemod em 72 handlers,
+  vetcare aparecendo no dashboard Golden Signals.
+- Gates da execução original (2026-09-09): tsc limpo, eslint limpo, jest 234/234, build PASS,
+  container rebuilded, curl real + Prometheus target + Grafana dashboard verificados.
+- Ação nesta sessão: nenhuma mudança de código necessária. `git status` limpo, `main` já
+  sincronizado com `origin/main` (nada pendente de commit ou push).
+- Status: DONE (sem novo trabalho — confirmação apenas)
